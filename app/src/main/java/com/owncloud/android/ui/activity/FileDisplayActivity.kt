@@ -300,6 +300,7 @@ class FileDisplayActivity :
         startMetadataSyncForRoot()
         handleBackPress()
         setupDrawer(menuItemId)
+        logOcsCredentials()
     }
 
     @Suppress("DEPRECATION")
@@ -316,6 +317,7 @@ class FileDisplayActivity :
                 val authToken = client.credentials.authToken
                 Log_OC.d(TAG, "OCS credentials — serverUrl=$serverUrl")
                 Log_OC.d(TAG, "OCS credentials — accountName=$accountName username=$username authToken=$authToken")
+
 
             } catch (e: CreationException) {
                 Log_OC.e(TAG, "OCS credentials — serverUrl=$serverUrl accountName=$accountName (client creation failed)", e)
