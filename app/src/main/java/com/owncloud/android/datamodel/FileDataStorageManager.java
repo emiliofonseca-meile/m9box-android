@@ -2415,6 +2415,8 @@ public class FileDataStorageManager {
 
         contentValues.put(ProviderTableMeta.CAPABILITIES_CLIENT_INTEGRATION_JSON, capability.getClientIntegrationJson());
 
+        contentValues.put(ProviderTableMeta.CAPABILITIES_SHARING_JSON, capability.getSharingJson());
+
         return contentValues;
     }
 
@@ -2612,6 +2614,9 @@ public class FileDataStorageManager {
             capability.setHasValidSubscription(getBoolean(cursor, ProviderTableMeta.CAPABILITIES_HAS_VALID_SUBSCRIPTION));
 
             capability.setClientIntegrationJson(getString(cursor, ProviderTableMeta.CAPABILITIES_CLIENT_INTEGRATION_JSON));
+
+            capability.setSharingJson(getString(cursor, ProviderTableMeta.CAPABILITIES_SHARING_JSON));
+
         }
 
         return capability;
