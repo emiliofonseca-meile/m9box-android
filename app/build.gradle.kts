@@ -172,6 +172,12 @@ android {
                 versionCode = 1
                 versionName = "1"
             }
+
+            // M9 Box - Meile branded client (resource overlay, no push yet)
+            register("meile") {
+                applicationId = "network.m9.box"
+                dimension = "default"
+            }
         }
     }
 
@@ -232,6 +238,11 @@ android {
         // Adds exported schema location as test app assets.
         getByName("androidTest") {
             assets.srcDirs(files("$projectDir/schemas"))
+        }
+        // M9 Box reuses the push-less generic variant code (F-Droid style, no FCM).
+        getByName("meile") {
+            java.srcDirs("src/generic/java")
+            kotlin.srcDirs("src/generic/java")
         }
     }
 
