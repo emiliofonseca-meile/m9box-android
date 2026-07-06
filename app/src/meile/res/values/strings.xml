@@ -9,6 +9,8 @@
     <string name="prefs_show_ecosystem_apps_summary">App suggestions in navigation heading</string>
     <string name="file_migration_failed_dir_already_exists">M9 Box folder already exists</string>
     <string name="ecosystem_apps_more">More Apps</string>
+    <string name="placeholder_search_in_nextcloud" translatable="false">Search in M9 Box</string>
+    <string name="single_sign_on_request_token" formatted="true">Allow %1$s to access your M9 Box account %2$s?</string>
     <string name="auto_upload_battery_optimization_reason">M9 Box\'s background activity is limited by battery optimization.</string>
     <string name="store_full_desc">Your files, calendar and contacts in one place.\n\nFeatures:\n* Clean, modern interface matching your provider\'s theme\n* Upload files to your M9 Box account\n* Share them with others\n* Keep your favorite files and folders synced\n* Search across all folders\n* Auto Upload for photos and videos taken by your device\n* Stay up to date with notifications\n* Multi-account support\n* Secure access with fingerprint or PIN</string>
 </resources>
