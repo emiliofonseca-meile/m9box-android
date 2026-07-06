@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ M9 Box - Meile branded Nextcloud client
+  ~ SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
+  ~ Overrides upstream strings that hardcode the Nextcloud brand and are user-visible.
+-->
+<resources>
+    <string name="compose_activity_label">M9 Box Assistant</string>
+    <string name="prefs_show_ecosystem_apps_summary">App suggestions in navigation heading</string>
+    <string name="file_migration_failed_dir_already_exists">M9 Box folder already exists</string>
+    <string name="ecosystem_apps_more">More Apps</string>
+    <string name="auto_upload_battery_optimization_reason">M9 Box\'s background activity is limited by battery optimization.</string>
+    <string name="store_full_desc">Your files, calendar and contacts in one place.\n\nFeatures:\n* Clean, modern interface matching your provider\'s theme\n* Upload files to your M9 Box account\n* Share them with others\n* Keep your favorite files and folders synced\n* Search across all folders\n* Auto Upload for photos and videos taken by your device\n* Stay up to date with notifications\n* Multi-account support\n* Secure access with fingerprint or PIN</string>
+</resources>
