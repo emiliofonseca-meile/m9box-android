@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ M9 Box - Meile branded Nextcloud client
+  ~ SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
+-->
+<resources>
+    <!-- App name and identity -->
+    <string name="app_name">M9 Box</string>
+    <string name="account_type">network.m9.box</string>
+    <string name="default_display_name_for_root_folder">M9 Box</string>
+
+    <!-- Provider authorities (device-global: MUST be unique to coexist with other clients) -->
+    <string name="authority">network.m9.box.provider</string>
+    <string name="users_and_groups_search_authority">network.m9.box.providers.UsersAndGroupsSearchProvider</string>
+    <string name="users_and_groups_share_with">network.m9.box.providers.UsersAndGroupsSearchProvider.action.SHARE_WITH</string>
+    <string name="document_provider_authority">network.m9.box.documents</string>
+    <string name="file_provider_authority">network.m9.box.files</string>
+    <string name="image_cache_provider_authority">network.m9.box.imageCache.provider</string>
+
+    <!-- User agent -->
+    <string name="nextcloud_user_agent">Mozilla/5.0 (Android) M9Box-android/%1$s%2$s</string>
+    <string name="office_user_agent">Mozilla/5.0 (Android %1$s) Mobile M9Box-android/%2$s</string>
+
+    <!-- Brand colors (sampled from M9 Box icon) -->
+    <color name="primary">#116DF0</color>
+    <color name="primary_dark">#0343CF</color>
+    <color name="color_accent">#31B3FC</color>
+    <color name="login_text_color">#ffffff</color>
+    <color name="login_text_hint_color">#A9D3F7</color>
+
+    <!-- Behavior: fleet still on NC 25, keep runtime theming from the instance -->
+    <bool name="show_outdated_server_warning">false</bool>
+    <bool name="is_branded_client">false</bool>
+    <bool name="show_server_url_input">true</bool>
+
+    <!-- Links (GPL/AGPL: source must be public) -->
+    <string name="url_help">https://github.com/emiliofonseca-meile/m9box-android</string>
+    <string name="privacy_url"></string>
+    <string name="sourcecode_url" translatable="false">https://github.com/emiliofonseca-meile/m9box-android</string>
+    <string name="url_imprint"></string>
+
+    <!-- Splash -->
+    <string name="splashScreenBold">M9</string>
+    <string name="splashScreenNormal">Box</string>
+</resources>
