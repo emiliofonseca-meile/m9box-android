@@ -2,24 +2,32 @@
  * M9 Box - Meile branded Nextcloud client
  * SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
  *
- * "Sincronizar Agenda e Contatos" setup screen. Reuses the already-signed-in
- * M9 Box file account to create the CalDAV/CardDAV sync account, requests the
- * calendar/contacts runtime permissions, then triggers a sync so events/contacts
- * land in the phone's native apps.
+ * "Sincronizar Agenda e Contatos" screen. Three clear states, so there is never a
+ * stuck/dark disabled button:
+ *   - OFF      : description + "Ativar sincronização" button.
+ *   - SYNCING  : spinner + "Sincronizando…".
+ *   - ACTIVE   : a green success card ("✓ Sincronização ativada", auto every ~4h)
+ *                with a subtle "Sincronizar agora" link for a manual refresh.
+ * A SyncStatusObserver flips SYNCING → ACTIVE when the background sync-adapter
+ * finishes, so the manual sync gives real feedback.
  */
 package com.nextcloud.meile.sync.ui
 
 import android.Manifest
 import android.accounts.Account
 import android.accounts.AccountManager
+import android.content.ContentResolver
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.view.View
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
 import com.nextcloud.meile.sync.MeileSync
 import com.owncloud.android.R
 import com.owncloud.android.lib.common.accounts.AccountUtils
@@ -28,7 +36,12 @@ import java.net.URI
 class MeileSyncSetupActivity : AppCompatActivity() {
 
     private lateinit var status: TextView
-    private lateinit var activateButton: MaterialButton
+    private lateinit var actionButton: MaterialButton
+    private lateinit var successCard: MaterialCardView
+    private lateinit var progress: ProgressBar
+
+    private var observerHandle: Any? = null
+    private var awaitingSync = false
 
     private val requiredPermissions = arrayOf(
         Manifest.permission.READ_CALENDAR,
@@ -47,61 +60,99 @@ class MeileSyncSetupActivity : AppCompatActivity() {
         toolbar.setNavigationOnClickListener { finish() }
 
         status = findViewById(R.id.meile_sync_status)
-        activateButton = findViewById(R.id.meile_sync_activate)
-        activateButton.setOnClickListener { onActivate() }
-        findViewById<MaterialButton>(R.id.meile_sync_now).setOnClickListener { forceSyncNow() }
+        actionButton = findViewById(R.id.meile_sync_action)
+        successCard = findViewById(R.id.meile_sync_success)
+        progress = findViewById(R.id.meile_sync_progress)
+
+        actionButton.setOnClickListener { onAction() }
+        findViewById<MaterialButton>(R.id.meile_sync_resync).setOnClickListener { triggerSync() }
+        renderIdle()
     }
 
-    private fun onActivate() {
-        if (currentFileAccount() == null) {
-            status.text = getString(R.string.meile_sync_setup_no_account)
-            return
+    override fun onResume() {
+        super.onResume()
+        observerHandle = ContentResolver.addStatusChangeListener(
+            ContentResolver.SYNC_OBSERVER_TYPE_ACTIVE or ContentResolver.SYNC_OBSERVER_TYPE_PENDING
+        ) { runOnUiThread { onSyncStatusChanged() } }
+        if (!awaitingSync) renderIdle()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        observerHandle?.let { ContentResolver.removeStatusChangeListener(it) }
+        observerHandle = null
+    }
+
+    /** OFF (button) or ACTIVE (success card), depending on whether sync is set up. */
+    private fun renderIdle(doneMessage: String? = null) {
+        awaitingSync = false
+        progress.visibility = View.GONE
+        val active = syncAccount() != null
+        actionButton.visibility = if (active) View.GONE else View.VISIBLE
+        actionButton.isEnabled = true
+        successCard.visibility = if (active) View.VISIBLE else View.GONE
+        status.text = doneMessage ?: if (active) "" else getString(R.string.meile_sync_state_off)
+    }
+
+    /** SYNCING: hide both action affordances, show the spinner. */
+    private fun renderSyncing() {
+        awaitingSync = true
+        actionButton.visibility = View.GONE
+        successCard.visibility = View.GONE
+        progress.visibility = View.VISIBLE
+        status.text = getString(R.string.meile_sync_syncing)
+    }
+
+    private fun onAction() {
+        if (syncAccount() == null) {
+            if (currentFileAccount() == null) {
+                status.text = getString(R.string.meile_sync_setup_no_account)
+                return
+            }
+            val missing = requiredPermissions.filter {
+                ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+            }
+            if (missing.isNotEmpty()) {
+                ActivityCompat.requestPermissions(this, missing.toTypedArray(), REQ_PERMISSIONS)
+                return
+            }
         }
-        val missing = requiredPermissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }
-        if (missing.isNotEmpty()) {
-            status.text = getString(R.string.meile_sync_setup_permissions)
-            ActivityCompat.requestPermissions(this, missing.toTypedArray(), REQ_PERMISSIONS)
-            return
-        }
-        activateSync()
+        triggerSync()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQ_PERMISSIONS) {
             if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                activateSync()
+                triggerSync()
             } else {
                 status.text = getString(R.string.meile_sync_setup_permissions)
             }
         }
     }
 
-    private fun activateSync() {
-        activateButton.isEnabled = false
-        status.text = getString(R.string.meile_sync_setup_progress)
+    /** Create the account if needed, then request an immediate sync + show progress. */
+    private fun triggerSync() {
         try {
-            val syncAccount = createSyncAccount()
-            MeileSync.requestImmediateSync(syncAccount)
-            status.text = getString(R.string.meile_sync_setup_success)
+            val account = syncAccount() ?: createSyncAccount()
+            renderSyncing()
+            MeileSync.requestImmediateSync(account)
         } catch (e: Exception) {
+            renderIdle()
             status.text = getString(R.string.meile_sync_setup_error, e.message ?: "erro")
-            activateButton.isEnabled = true
         }
     }
 
-    /** Re-trigger a sync of the existing account (or set it up if missing). */
-    private fun forceSyncNow() {
-        val existing = AccountManager.get(this)
-            .getAccountsByType(MeileSync.accountType(this)).firstOrNull()
-        if (existing == null) {
-            onActivate()
-            return
-        }
-        MeileSync.requestImmediateSync(existing)
-        status.text = getString(R.string.meile_sync_setup_progress)
+    /** When the background sync stops running, flip to ACTIVE + "✓ Sincronizado". */
+    private fun onSyncStatusChanged() {
+        if (!awaitingSync) return
+        val account = syncAccount() ?: return
+        val running = ContentResolver.isSyncActive(account, MeileSync.CALENDAR_AUTHORITY) ||
+            ContentResolver.isSyncActive(account, MeileSync.CONTACTS_AUTHORITY) ||
+            ContentResolver.isSyncPending(account, MeileSync.CALENDAR_AUTHORITY) ||
+            ContentResolver.isSyncPending(account, MeileSync.CONTACTS_AUTHORITY)
+        if (running) return
+        renderIdle(doneMessage = getString(R.string.meile_sync_done))
     }
 
     private fun createSyncAccount(): Account {
@@ -121,11 +172,12 @@ class MeileSyncSetupActivity : AppCompatActivity() {
         )
     }
 
-    /** First M9 Box file account (type network.m9.box). */
+    private fun syncAccount(): Account? =
+        AccountManager.get(this).getAccountsByType(MeileSync.accountType(this)).firstOrNull()
+
     private fun currentFileAccount(): Account? =
         AccountManager.get(this).getAccountsByType(getString(R.string.account_type)).firstOrNull()
 
-    /** "<user>@<box-host>" so the sync account is recognizable under Settings. */
     private fun displayNameFor(fileAccount: Account, baseUrl: String): String {
         val host = runCatching { URI(baseUrl).host }.getOrNull() ?: return fileAccount.name
         val user = fileAccount.name.substringBeforeLast('@', fileAccount.name)
