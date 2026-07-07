@@ -36,5 +36,9 @@
         android:enabled="true"
         android:icon="@drawable/ic_album"
         android:title="@string/drawer_item_album"/>
+        android:id="@+id/nav_calendar"
+        android:enabled="true"
+        android:icon="@drawable/file_calendar"
+        android:title="@string/bottom_navigation_menu_calendar_label"/>
 
 </menu>
