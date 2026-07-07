@@ -19,6 +19,8 @@ import android.accounts.AccountManager
 import android.content.ContentResolver
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -42,6 +44,9 @@ class MeileSyncSetupActivity : AppCompatActivity() {
 
     private var observerHandle: Any? = null
     private var awaitingSync = false
+    private var sawSyncActive = false
+    private val uiHandler = Handler(Looper.getMainLooper())
+    private val syncTimeout = Runnable { if (awaitingSync) finishSyncing() }
 
     private val requiredPermissions = arrayOf(
         Manifest.permission.READ_CALENDAR,
@@ -79,6 +84,7 @@ class MeileSyncSetupActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        uiHandler.removeCallbacks(syncTimeout)
         observerHandle?.let { ContentResolver.removeStatusChangeListener(it) }
         observerHandle = null
     }
@@ -97,10 +103,20 @@ class MeileSyncSetupActivity : AppCompatActivity() {
     /** SYNCING: hide both action affordances, show the spinner. */
     private fun renderSyncing() {
         awaitingSync = true
+        sawSyncActive = false
         actionButton.visibility = View.GONE
         successCard.visibility = View.GONE
         progress.visibility = View.VISIBLE
         status.text = getString(R.string.meile_sync_syncing)
+        // Safety net: never stay stuck on the spinner even if the sync gets
+        // throttled/coalesced and no active->idle transition ever fires.
+        uiHandler.removeCallbacks(syncTimeout)
+        uiHandler.postDelayed(syncTimeout, 20_000)
+    }
+
+    private fun finishSyncing() {
+        uiHandler.removeCallbacks(syncTimeout)
+        renderIdle(doneMessage = getString(R.string.meile_sync_done))
     }
 
     private fun onAction() {
@@ -151,8 +167,14 @@ class MeileSyncSetupActivity : AppCompatActivity() {
             ContentResolver.isSyncActive(account, MeileSync.CONTACTS_AUTHORITY) ||
             ContentResolver.isSyncPending(account, MeileSync.CALENDAR_AUTHORITY) ||
             ContentResolver.isSyncPending(account, MeileSync.CONTACTS_AUTHORITY)
-        if (running) return
-        renderIdle(doneMessage = getString(R.string.meile_sync_done))
+        if (running) {
+            sawSyncActive = true
+            return
+        }
+        // Only finish once we've actually seen the sync run (avoids finishing in
+        // the brief gap before requestSync makes it active); the timeout covers
+        // the throttled case where it never runs.
+        if (sawSyncActive) finishSyncing()
     }
 
     private fun createSyncAccount(): Account {

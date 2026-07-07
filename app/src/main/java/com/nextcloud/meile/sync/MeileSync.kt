@@ -89,11 +89,18 @@ object MeileSync {
         ContentResolver.addPeriodicSync(account, authority, Bundle(), SYNC_INTERVAL_SECONDS)
     }
 
-    /** Kick off an immediate manual sync of both providers. */
+    /**
+     * Kick off an immediate manual sync of both providers. IGNORE_BACKOFF +
+     * IGNORE_SETTINGS make it run unconditionally — without them the framework
+     * throttles/coalesces a manual sync that follows a recent one, so nothing
+     * actually runs and the UI would wait forever.
+     */
     fun requestImmediateSync(account: Account) {
         val extras = Bundle().apply {
             putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true)
             putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true)
+            putBoolean(ContentResolver.SYNC_EXTRAS_IGNORE_BACKOFF, true)
+            putBoolean(ContentResolver.SYNC_EXTRAS_IGNORE_SETTINGS, true)
         }
         ContentResolver.requestSync(account, CALENDAR_AUTHORITY, extras)
         ContentResolver.requestSync(account, CONTACTS_AUTHORITY, extras)
