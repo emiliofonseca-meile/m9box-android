@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
  *
  * "Sincronizar Agenda e Contatos" setup screen. Reuses the already-signed-in
- * M9 Box file account (senha Box = senha NC) to create the CalDAV/CardDAV sync
- * account, requests the calendar/contacts runtime permissions, then triggers an
- * immediate sync so events/contacts land in the phone's native apps.
+ * M9 Box file account to create the CalDAV/CardDAV sync account, requests the
+ * calendar/contacts runtime permissions, then triggers a sync so events/contacts
+ * land in the phone's native apps.
  */
 package com.nextcloud.meile.sync.ui
 
@@ -13,16 +13,14 @@ import android.Manifest
 import android.accounts.Account
 import android.accounts.AccountManager
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.os.Bundle
-import android.view.View
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
+import com.nextcloud.meile.sync.MeileSync
 import com.owncloud.android.R
 import com.owncloud.android.lib.common.accounts.AccountUtils
 import java.net.URI
@@ -30,7 +28,7 @@ import java.net.URI
 class MeileSyncSetupActivity : AppCompatActivity() {
 
     private lateinit var status: TextView
-    private lateinit var button: Button
+    private lateinit var activateButton: MaterialButton
 
     private val requiredPermissions = arrayOf(
         Manifest.permission.READ_CALENDAR,
@@ -41,37 +39,17 @@ class MeileSyncSetupActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        supportActionBar?.title = getString(R.string.meile_sync_setup_title)
-        setContentView(buildLayout())
-    }
+        setContentView(R.layout.activity_meile_sync)
 
-    private fun buildLayout(): View {
-        val pad = (resources.displayMetrics.density * 20).toInt()
-        val column = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(pad, pad, pad, pad)
-        }
-        column.addView(TextView(this).apply {
-            text = getString(R.string.meile_sync_setup_title)
-            textSize = 20f
-            setTextColor(Color.parseColor("#116DF0"))
-        })
-        column.addView(TextView(this).apply {
-            text = getString(R.string.meile_sync_setup_description)
-            textSize = 15f
-            setPadding(0, pad / 2, 0, pad)
-        })
-        status = TextView(this).apply {
-            textSize = 14f
-            setPadding(0, pad / 2, 0, pad / 2)
-        }
-        button = Button(this).apply {
-            text = getString(R.string.meile_sync_setup_button)
-            setOnClickListener { onActivate() }
-        }
-        column.addView(button)
-        column.addView(status)
-        return ScrollView(this).apply { addView(column) }
+        val toolbar = findViewById<MaterialToolbar>(R.id.meile_sync_toolbar)
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        toolbar.setNavigationOnClickListener { finish() }
+
+        status = findViewById(R.id.meile_sync_status)
+        activateButton = findViewById(R.id.meile_sync_activate)
+        activateButton.setOnClickListener { onActivate() }
+        findViewById<MaterialButton>(R.id.meile_sync_now).setOnClickListener { forceSyncNow() }
     }
 
     private fun onActivate() {
@@ -102,31 +80,45 @@ class MeileSyncSetupActivity : AppCompatActivity() {
     }
 
     private fun activateSync() {
-        button.isEnabled = false
+        activateButton.isEnabled = false
         status.text = getString(R.string.meile_sync_setup_progress)
         try {
-            val fileAccount = currentFileAccount() ?: throw IllegalStateException("no account")
-            val am = AccountManager.get(this)
-            val baseUrl = am.getUserData(fileAccount, AccountUtils.Constants.KEY_OC_BASE_URL)
-                ?: throw IllegalStateException("missing server url")
-            val userId = am.getUserData(fileAccount, AccountUtils.Constants.KEY_USER_ID)
-                ?: fileAccount.name.substringBeforeLast('@')
-            val password = am.getPassword(fileAccount) ?: throw IllegalStateException("missing password")
-
-            val displayName = displayNameFor(fileAccount, baseUrl)
-            val syncAccount: Account = com.nextcloud.meile.sync.MeileSync.createOrUpdateAccount(
-                context = this,
-                displayName = displayName,
-                baseUrl = baseUrl,
-                userId = userId,
-                password = password
-            )
-            com.nextcloud.meile.sync.MeileSync.requestImmediateSync(syncAccount)
+            val syncAccount = createSyncAccount()
+            MeileSync.requestImmediateSync(syncAccount)
             status.text = getString(R.string.meile_sync_setup_success)
         } catch (e: Exception) {
             status.text = getString(R.string.meile_sync_setup_error, e.message ?: "erro")
-            button.isEnabled = true
+            activateButton.isEnabled = true
         }
+    }
+
+    /** Re-trigger a sync of the existing account (or set it up if missing). */
+    private fun forceSyncNow() {
+        val existing = AccountManager.get(this)
+            .getAccountsByType(MeileSync.accountType(this)).firstOrNull()
+        if (existing == null) {
+            onActivate()
+            return
+        }
+        MeileSync.requestImmediateSync(existing)
+        status.text = getString(R.string.meile_sync_setup_progress)
+    }
+
+    private fun createSyncAccount(): Account {
+        val fileAccount = currentFileAccount() ?: throw IllegalStateException("no account")
+        val am = AccountManager.get(this)
+        val baseUrl = am.getUserData(fileAccount, AccountUtils.Constants.KEY_OC_BASE_URL)
+            ?: throw IllegalStateException("missing server url")
+        val userId = am.getUserData(fileAccount, AccountUtils.Constants.KEY_USER_ID)
+            ?: fileAccount.name.substringBeforeLast('@')
+        val password = am.getPassword(fileAccount) ?: ""
+        return MeileSync.createOrUpdateAccount(
+            context = this,
+            displayName = displayNameFor(fileAccount, baseUrl),
+            baseUrl = baseUrl,
+            userId = userId,
+            password = password
+        )
     }
 
     /** First M9 Box file account (type network.m9.box). */

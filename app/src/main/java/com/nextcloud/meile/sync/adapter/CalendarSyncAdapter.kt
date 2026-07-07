@@ -41,13 +41,17 @@ class CalendarSyncAdapter(context: Context) : AbstractThreadedSyncAdapter(contex
             val windowStart = now - PAST_WINDOW_MS
             val windowEnd = now + FUTURE_WINDOW_MS
 
-            for (calendar in client.discoverCalendars()) {
+            val calendars = client.discoverCalendars()
+            var eventCount = 0
+            for (calendar in calendars) {
                 val calendarId = store.ensureCalendar(calendar)
                 if (calendarId <= 0) continue
                 val resources = client.listEvents(calendar.href, windowStart, windowEnd)
                 store.syncEvents(calendarId, resources)
+                eventCount += resources.size
                 syncResult.stats.numEntries += resources.size.toLong()
             }
+            Log.i(TAG, "sync ok: calendars=${calendars.size} events=$eventCount")
         } catch (e: Exception) {
             Log.w(TAG, "Calendar sync failed", e)
             syncResult.stats.numIoExceptions++

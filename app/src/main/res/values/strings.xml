@@ -19,6 +19,7 @@
     <string name="meile_sync_setup_title">Sincronizar Agenda e Contatos</string>
     <string name="meile_sync_setup_description">Sincronize a agenda e os contatos do seu M9 Box com o calendário e a agenda nativos do celular.</string>
     <string name="meile_sync_setup_button">Ativar sincronização</string>
+    <string name="meile_sync_now">Sincronizar agora</string>
     <string name="meile_sync_setup_calendars">Agenda</string>
     <string name="meile_sync_setup_contacts">Contatos</string>
     <string name="meile_sync_setup_progress">Configurando sincronização…</string>

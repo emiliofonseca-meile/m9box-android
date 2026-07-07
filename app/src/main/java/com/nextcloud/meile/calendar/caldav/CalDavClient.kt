@@ -10,7 +10,6 @@ package com.nextcloud.meile.calendar.caldav
 
 import com.nextcloud.meile.calendar.model.CalendarCollection
 import com.nextcloud.meile.calendar.model.RemoteResource
-import okhttp3.Headers.Companion.toHeaders
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -62,7 +61,7 @@ class CalDavClient(
         val body = PROP_CALENDARS.toRequestBody(xml)
         val req = baseRequest(calendarHome)
             .method("PROPFIND", body)
-            .headers(mapOf("Depth" to "1", "Content-Type" to xml.toString()).toHeaders())
+            .header("Depth", "1")
             .build()
         val (code, resp) = execString(req)
         if (code != 207) throw CalDavException(code, "discoverCalendars")
@@ -73,7 +72,7 @@ class CalDavClient(
         val body = calendarQuery(startUtcMillis, endUtcMillis).toRequestBody(xml)
         val req = baseRequest(calendarHref)
             .method("REPORT", body)
-            .headers(mapOf("Depth" to "1", "Content-Type" to xml.toString()).toHeaders())
+            .header("Depth", "1")
             .build()
         val (code, resp) = execString(req)
         if (code != 207) throw CalDavException(code, "listEvents")
@@ -84,7 +83,7 @@ class CalDavClient(
         val body = syncCollectionBody(syncToken).toRequestBody(xml)
         val req = baseRequest(calendarHref)
             .method("REPORT", body)
-            .headers(mapOf("Depth" to "1", "Content-Type" to xml.toString()).toHeaders())
+            .header("Depth", "1")
             .build()
         val (code, resp) = execString(req)
         if (code != 207) throw CalDavException(code, "syncCollection")
