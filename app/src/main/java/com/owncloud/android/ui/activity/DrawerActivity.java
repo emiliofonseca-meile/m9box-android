@@ -682,6 +682,8 @@ public abstract class DrawerActivity extends ToolbarActivity
                 startAssistantScreen();
             } else if (menuItemId == R.id.nav_gallery) {
                 openMediaTab(menuItem.getItemId());
+            } else if (menuItemId == R.id.nav_calendar && !(this instanceof com.nextcloud.meile.calendar.CalendarActivity)) {
+                startActivity(new android.content.Intent(this, com.nextcloud.meile.calendar.CalendarActivity.class));
             }
 
             // Remove extra icon from the action bar
