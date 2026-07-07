@@ -288,6 +288,10 @@ public abstract class FileActivity extends DrawerActivity
         if (mOperationsServiceBinder != null) {
             doOnResumeAndBound();
         }
+        // M9 Box: refresh the native Calendar/Contacts from the server when the app
+        // comes to the foreground (throttled), so an active user doesn't wait for the
+        // 1h periodic poll to see server-side edits.
+        com.nextcloud.meile.sync.MeileSync.INSTANCE.requestForegroundSync(this);
     }
 
     @Override

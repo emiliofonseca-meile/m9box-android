@@ -36,8 +36,19 @@ object MeileSync {
     const val CALENDAR_AUTHORITY = "com.android.calendar"
     const val CONTACTS_AUTHORITY = "com.android.contacts"
 
-    /** Periodic sync interval (seconds). */
-    private const val SYNC_INTERVAL_SECONDS = 4 * 60 * 60L // 4h
+    /**
+     * Periodic sync interval (seconds). Android's Doze batches periodic syncs into
+     * maintenance windows, so anything under ~1h is unreliable and drains battery
+     * for little gain; 1h is the sweet spot. Active users get near-instant freshness
+     * from the foreground sync below (opening the app), and event changes that name
+     * an attendee are also delivered out-of-band via the server's iMIP e-mail. True
+     * real-time would need DAV Push (WebDAV-Push over UnifiedPush/FCM) — a v2 item.
+     */
+    private const val SYNC_INTERVAL_SECONDS = 60 * 60L // 1h
+
+    /** Don't fire a foreground sync more often than this (throttle, seconds). */
+    private const val FOREGROUND_SYNC_MIN_INTERVAL_MS = 10 * 60 * 1000L // 10min
+    private var lastForegroundSyncMs = 0L
 
     fun accountType(context: Context): String = context.getString(R.string.meile_sync_account_type)
 
@@ -110,7 +121,24 @@ object MeileSync {
     private fun enableSync(account: Account, authority: String) {
         ContentResolver.setIsSyncable(account, authority, 1)
         ContentResolver.setSyncAutomatically(account, authority, true)
+        // removePeriodicSync first: re-adding with the same extras does NOT reliably
+        // update the period of an existing registration (the old JobScheduler job
+        // survives), so an interval change wouldn't take on already-provisioned
+        // accounts. Clearing it forces the new cadence.
+        ContentResolver.removePeriodicSync(account, authority, Bundle())
         ContentResolver.addPeriodicSync(account, authority, Bundle(), SYNC_INTERVAL_SECONDS)
+    }
+
+    /**
+     * Re-apply the periodic interval to an already-provisioned account. Accounts
+     * created before the interval changed keep their old registration until enableSync
+     * runs again; call this when the sync screen opens so existing users pick up the
+     * current cadence without re-adding the account.
+     */
+    fun reconcilePeriodicSync(context: Context) {
+        val account = currentSyncAccount(context) ?: return
+        enableSync(account, CALENDAR_AUTHORITY)
+        enableSync(account, CONTACTS_AUTHORITY)
     }
 
     /**
@@ -119,6 +147,23 @@ object MeileSync {
      * throttles/coalesces a manual sync that follows a recent one, so nothing
      * actually runs and the UI would wait forever.
      */
+    /**
+     * Throttled sync when the app comes to the foreground, so an active user sees
+     * server-side changes almost immediately (instead of waiting up to 1h). Uses
+     * plain extras — NOT ignore-backoff — so the framework can still coalesce it and
+     * it stays battery-cheap. No-op if there is no current sync account. Safe to call
+     * from any Activity.onResume.
+     */
+    fun requestForegroundSync(context: Context) {
+        val account = currentSyncAccount(context) ?: return
+        val now = System.currentTimeMillis()
+        if (now - lastForegroundSyncMs < FOREGROUND_SYNC_MIN_INTERVAL_MS) return
+        lastForegroundSyncMs = now
+        val extras = Bundle().apply { putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true) }
+        ContentResolver.requestSync(account, CALENDAR_AUTHORITY, extras)
+        ContentResolver.requestSync(account, CONTACTS_AUTHORITY, extras)
+    }
+
     fun requestImmediateSync(account: Account) {
         val extras = Bundle().apply {
             putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true)
