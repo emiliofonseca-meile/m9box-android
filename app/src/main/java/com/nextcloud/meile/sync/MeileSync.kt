@@ -41,6 +41,30 @@ object MeileSync {
 
     fun accountType(context: Context): String = context.getString(R.string.meile_sync_account_type)
 
+    private fun fileAccounts(context: Context): List<Account> =
+        AccountManager.get(context).getAccountsByType(context.getString(R.string.account_type)).toList()
+
+    /**
+     * The sync account tied to a currently signed-in file account (they share the
+     * same name). Picking the first sync account blindly can hit a STALE one left
+     * over from a previous login (no file account -> auth fails -> the real account
+     * never syncs), so always match against the current file account(s).
+     */
+    fun currentSyncAccount(context: Context): Account? {
+        val fileNames = fileAccounts(context).map { it.name }.toSet()
+        return AccountManager.get(context).getAccountsByType(accountType(context))
+            .firstOrNull { it.name in fileNames }
+    }
+
+    /** Drop sync accounts whose file account is gone (e.g. after a logout). */
+    fun removeStaleAccounts(context: Context) {
+        val am = AccountManager.get(context)
+        val fileNames = fileAccounts(context).map { it.name }.toSet()
+        am.getAccountsByType(accountType(context))
+            .filter { it.name !in fileNames }
+            .forEach { runCatching { am.removeAccountExplicitly(it) } }
+    }
+
     /**
      * Derive the Box server URL from an e-mail using the frota convention
      * (`box.<domain>` CNAME). Kept for a login-first flow; the in-app path reuses

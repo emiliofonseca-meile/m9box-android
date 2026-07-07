@@ -57,6 +57,9 @@ class MeileSyncSetupActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Clean up sync accounts orphaned by a previous logout so a stale one is
+        // never picked and never fails auth in the background.
+        MeileSync.removeStaleAccounts(this)
         setContentView(R.layout.activity_meile_sync)
 
         val toolbar = findViewById<MaterialToolbar>(R.id.meile_sync_toolbar)
@@ -194,8 +197,7 @@ class MeileSyncSetupActivity : AppCompatActivity() {
         )
     }
 
-    private fun syncAccount(): Account? =
-        AccountManager.get(this).getAccountsByType(MeileSync.accountType(this)).firstOrNull()
+    private fun syncAccount(): Account? = MeileSync.currentSyncAccount(this)
 
     private fun currentFileAccount(): Account? =
         AccountManager.get(this).getAccountsByType(getString(R.string.account_type)).firstOrNull()
