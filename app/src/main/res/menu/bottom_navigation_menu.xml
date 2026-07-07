@@ -31,6 +31,12 @@
         android:icon="@drawable/selector_media"
         android:title="@string/bottom_navigation_menu_media_label"/>
 
+    <!--
+      M9 Box: in-app calendar DISABLED (2026-07-07).
+      Decision: Agenda/Contatos must sync to the device's NATIVE Calendar/Contacts
+      apps via an embedded CalDAV/CardDAV sync-adapter (see com.nextcloud.meile.sync),
+      NOT a calendar screen that lives only inside this app. The in-app module is
+      kept in the tree (commented out) in case we want it back later.
     <item
         android:id="@+id/nav_album"
         android:enabled="true"
@@ -40,5 +46,6 @@
         android:enabled="true"
         android:icon="@drawable/file_calendar"
         android:title="@string/bottom_navigation_menu_calendar_label"/>
+    -->
 
 </menu>

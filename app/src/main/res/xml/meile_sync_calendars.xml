@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  M9 Box: sync-adapter binding for the device Calendar provider. The OS drives
+  periodic sync of CalDAV collections into com.android.calendar so events show up
+  in the phone's native Calendar app.
+-->
+<sync-adapter xmlns:android="http://schemas.android.com/apk/res/android"
+    android:contentAuthority="com.android.calendar"
+    android:accountType="@string/meile_sync_account_type"
+    android:userVisible="true"
+    android:supportsUploading="true"
+    android:allowParallelSyncs="false"
+    android:isAlwaysSyncable="true" />

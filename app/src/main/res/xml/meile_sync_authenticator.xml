@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  M9 Box - Meile branded Nextcloud client
+  SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
+
+  Account type for the embedded CalDAV/CardDAV sync-adapter. Distinct from the
+  app's own file account (network.m9.box) so it appears as its own "M9 Box Sync"
+  account under Settings > Accounts and owns the device calendar/contacts rows.
+-->
+<account-authenticator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accountType="@string/meile_sync_account_type"
+    android:icon="@mipmap/ic_launcher"
+    android:smallIcon="@mipmap/ic_launcher"
+    android:label="@string/meile_sync_account_label" />

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  M9 Box: keep the nav_calendar id defined even though the in-app calendar menu
+  item is commented out (bottom_navigation_menu.xml). CalendarActivity is disabled
+  but still compiles and references R.id.nav_calendar; this id lets it build so the
+  module can be re-enabled later without churn.
+-->
+<resources>
+    <item name="nav_calendar" type="id" />
+</resources>
