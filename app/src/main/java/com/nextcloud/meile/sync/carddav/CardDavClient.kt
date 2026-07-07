@@ -8,7 +8,6 @@
  */
 package com.nextcloud.meile.sync.carddav
 
-import okhttp3.Headers.Companion.toHeaders
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -54,7 +53,7 @@ class CardDavClient(
     fun discoverAddressBooks(): List<AddressBookCollection> {
         val req = baseRequest(addressBookHome)
             .method("PROPFIND", PROP_ADDRESSBOOKS.toRequestBody(xml))
-            .headers(mapOf("Depth" to "1", "Content-Type" to xml.toString()).toHeaders())
+            .header("Depth", "1")
             .build()
         val (code, resp) = execString(req)
         if (code != 207) throw CardDavException(code, "discoverAddressBooks")
@@ -64,7 +63,7 @@ class CardDavClient(
     fun listContacts(addressBookHref: String): List<RemoteVCard> {
         val req = baseRequest(addressBookHref)
             .method("REPORT", ADDRESSBOOK_QUERY.toRequestBody(xml))
-            .headers(mapOf("Depth" to "1", "Content-Type" to xml.toString()).toHeaders())
+            .header("Depth", "1")
             .build()
         val (code, resp) = execString(req)
         if (code != 207) throw CardDavException(code, "listContacts")

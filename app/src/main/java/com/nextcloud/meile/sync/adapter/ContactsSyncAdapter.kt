@@ -39,12 +39,14 @@ class ContactsSyncAdapter(context: Context) : AbstractThreadedSyncAdapter(contex
             val client = CardDavClient(MeileSync.okHttp(), credentials.baseUrl, credentials.authHeader, credentials.userId)
             val store = AndroidContactsStore(context, account)
 
+            val books = client.discoverAddressBooks()
             val all = ArrayList<RemoteVCard>()
-            for (book in client.discoverAddressBooks()) {
+            for (book in books) {
                 all.addAll(client.listContacts(book.href))
             }
             store.sync(all)
             syncResult.stats.numEntries += all.size.toLong()
+            Log.i(TAG, "sync ok: addressBooks=${books.size} contacts=${all.size}")
         } catch (e: Exception) {
             Log.w(TAG, "Contacts sync failed", e)
             syncResult.stats.numIoExceptions++

@@ -18,12 +18,15 @@ import android.accounts.AccountManager
 import android.content.ContentResolver
 import android.content.Context
 import android.os.Bundle
-import android.util.Base64
+import android.util.Log
 import com.owncloud.android.R
+import com.owncloud.android.lib.common.accounts.AccountUtils
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 object MeileSync {
+
+    private const val TAG = "MeileSync"
 
     /** AccountManager userdata keys on the sync account. */
     const val KEY_BASE_URL = "meile_base_url"
@@ -103,14 +106,33 @@ object MeileSync {
         val am = AccountManager.get(context)
         val baseUrl = am.getUserData(account, KEY_BASE_URL) ?: return null
         val userId = am.getUserData(account, KEY_USER_ID) ?: return null
-        val password = am.getPassword(account) ?: return null
-        if (baseUrl.isEmpty() || userId.isEmpty() || password.isEmpty()) return null
-        return Credentials(baseUrl, userId, authHeader(userId, password))
+        if (baseUrl.isEmpty() || userId.isEmpty()) return null
+        val header = authHeaderFromFileAccount(context, account.name) ?: return null
+        return Credentials(baseUrl, userId, header)
     }
 
-    fun authHeader(userId: String, password: String): String {
-        val token = Base64.encodeToString("$userId:$password".toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
-        return "Basic $token"
+    /**
+     * Reuse the M9 Box FILE account's real DAV credentials (the sync account shares
+     * its name). The app authenticates with an app-password whose Basic username is
+     * the login name — NOT the user id (oc_id). Hand-building `Basic base64(userId:pw)`
+     * was wrong and got 401; `OwnCloudClient.credentials.toOkHttpCredentials()` yields
+     * the exact Authorization header the app uses (Basic or Bearer).
+     */
+    private fun authHeaderFromFileAccount(context: Context, accountName: String): String? {
+        val fileType = context.getString(R.string.account_type)
+        val fileAccount = AccountManager.get(context)
+            .getAccountsByType(fileType)
+            .firstOrNull { it.name == accountName } ?: return null
+        return try {
+            // Load the real credentials from AccountManager. Building an
+            // OwnCloudAccount and getClientFor() without loadCredentials() yields an
+            // ANONYMOUS client ("Basic :") → 401; getCredentialsForAccount loads them.
+            val creds = AccountUtils.getCredentialsForAccount(context, fileAccount)
+            creds?.toOkHttpCredentials()
+        } catch (e: Exception) {
+            Log.w(TAG, "credential load failed", e)
+            null
+        }
     }
 
     fun okHttp(): OkHttpClient = OkHttpClient.Builder()
