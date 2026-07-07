@@ -613,6 +613,11 @@ public abstract class DrawerActivity extends ToolbarActivity
             resetOnlyPersonalAndOnDevice();
             final Intent intent = new Intent(this, SettingsActivity.class);
             startActivity(intent);
+        } else if (itemId == R.id.nav_meile_sync) {
+            // M9 Box: open the CalDAV/CardDAV device-sync setup (Agenda + Contatos
+            // into the phone's native Calendar/Contacts apps).
+            resetOnlyPersonalAndOnDevice();
+            startActivity(new Intent(this, com.nextcloud.meile.sync.ui.MeileSyncSetupActivity.class));
         } else if (itemId == R.id.nav_community) {
             resetOnlyPersonalAndOnDevice();
             pushFragment(NavigatorScreen.Community.INSTANCE);
@@ -682,9 +687,15 @@ public abstract class DrawerActivity extends ToolbarActivity
                 startAssistantScreen();
             } else if (menuItemId == R.id.nav_gallery) {
                 openMediaTab(menuItem.getItemId());
-            } else if (menuItemId == R.id.nav_calendar && !(this instanceof com.nextcloud.meile.calendar.CalendarActivity)) {
-                startActivity(new android.content.Intent(this, com.nextcloud.meile.calendar.CalendarActivity.class));
             }
+            // M9 Box: in-app calendar DISABLED (2026-07-07). Replaced by native
+            // device sync via the embedded CalDAV/CardDAV sync-adapter
+            // (com.nextcloud.meile.sync). The R.id.nav_calendar menu item is
+            // commented out in bottom_navigation_menu.xml, so this branch never
+            // fires; kept here (disabled) to re-enable the in-app module if needed.
+            // else if (menuItemId == R.id.nav_calendar && !(this instanceof com.nextcloud.meile.calendar.CalendarActivity)) {
+            //     startActivity(new android.content.Intent(this, com.nextcloud.meile.calendar.CalendarActivity.class));
+            // }
 
             // Remove extra icon from the action bar
             if (getSupportActionBar() != null) {

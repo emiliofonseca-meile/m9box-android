@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  M9 Box: sync-adapter binding for the device Contacts provider. Syncs CardDAV
+  address books into com.android.contacts so contacts show up in the phone's
+  native Contacts/dialer.
+-->
+<sync-adapter xmlns:android="http://schemas.android.com/apk/res/android"
+    android:contentAuthority="com.android.contacts"
+    android:accountType="@string/meile_sync_account_type"
+    android:userVisible="true"
+    android:supportsUploading="true"
+    android:allowParallelSyncs="false"
+    android:isAlwaysSyncable="true" />

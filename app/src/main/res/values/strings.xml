@@ -13,6 +13,20 @@
     <string name="bottom_navigation_menu_assistant_label">Assistant</string>
     <string name="bottom_navigation_menu_media_label">Media</string>
     <string name="bottom_navigation_menu_calendar_label">Calendar</string>
+    <!-- M9 Box: embedded CalDAV/CardDAV device-sync -->
+    <string name="meile_sync_account_type" translatable="false">network.m9.box.sync</string>
+    <string name="meile_sync_account_label">M9 Box Sync</string>
+    <string name="meile_sync_setup_title">Sincronizar Agenda e Contatos</string>
+    <string name="meile_sync_setup_description">Sincronize a agenda e os contatos do seu M9 Box com o calendário e a agenda nativos do celular.</string>
+    <string name="meile_sync_setup_button">Ativar sincronização</string>
+    <string name="meile_sync_setup_calendars">Agenda</string>
+    <string name="meile_sync_setup_contacts">Contatos</string>
+    <string name="meile_sync_setup_progress">Configurando sincronização…</string>
+    <string name="meile_sync_setup_success">Sincronização ativada. Seus eventos e contatos aparecerão no celular em instantes.</string>
+    <string name="meile_sync_setup_no_account">Entre na sua conta M9 Box primeiro.</string>
+    <string name="meile_sync_setup_error">Não foi possível ativar a sincronização: %1$s</string>
+    <string name="meile_sync_setup_permissions">Conceda acesso à Agenda e aos Contatos para sincronizar.</string>
+    <string name="meile_sync_notification_channel">Sincronização M9 Box</string>
     <string name="file_list_error_headline">Poor connection</string>
     <string name="file_list_error_description">Check your internet connection or try again later</string>
     <string name="about_android">%1$s Android app</string>

@@ -139,10 +139,17 @@
             android:exported="true"
             android:label="@string/compose_activity_label"/>
 
+        <!--
+          M9 Box: in-app calendar DISABLED (2026-07-07). Superseded by native device
+          sync (embedded CalDAV/CardDAV sync-adapter, com.nextcloud.meile.sync). The
+          Activity source stays in the tree and still compiles (unreferenced); this
+          manifest entry is commented out so it cannot be launched. Re-enable to bring
+          the in-app calendar back.
         <activity
             android:name="com.nextcloud.meile.calendar.CalendarActivity"
             android:exported="false"
             android:label="@string/bottom_navigation_menu_calendar_label"/>
+        -->
 
         <activity-alias
             android:name="com.nextcloud.ui.composeActivity.ComposeProcessTextAlias"
@@ -438,6 +445,48 @@
             android:name="com.nextcloud.client.widget.DashboardWidgetService"
             android:exported="true"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <!-- M9 Box: embedded CalDAV/CardDAV device sync (Agenda + Contatos into the
+             phone's native Calendar/Contacts apps). One app, no separate DAVx5. -->
+        <service
+            android:name="com.nextcloud.meile.sync.account.MeileSyncAuthenticatorService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/meile_sync_authenticator" />
+        </service>
+        <service
+            android:name="com.nextcloud.meile.sync.adapter.CalendarSyncService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="android.content.SyncAdapter" />
+            </intent-filter>
+            <meta-data
+                android:name="android.content.SyncAdapter"
+                android:resource="@xml/meile_sync_calendars" />
+        </service>
+        <service
+            android:name="com.nextcloud.meile.sync.adapter.ContactsSyncService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="android.content.SyncAdapter" />
+            </intent-filter>
+            <meta-data
+                android:name="android.content.SyncAdapter"
+                android:resource="@xml/meile_sync_contacts" />
+            <meta-data
+                android:name="android.provider.CONTACTS_STRUCTURE"
+                android:resource="@xml/meile_sync_contacts_structure" />
+        </service>
+        <activity
+            android:name="com.nextcloud.meile.sync.ui.MeileSyncSetupActivity"
+            android:exported="false"
+            android:label="@string/meile_sync_setup_title" />
 
         <provider
             android:name=".providers.FileContentProvider"

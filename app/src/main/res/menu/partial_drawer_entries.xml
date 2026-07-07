@@ -77,6 +77,12 @@
             android:icon="@drawable/selector_assistant"
             android:orderInCategory="1"
             android:title="@string/drawer_item_assistant" />
+        <!-- M9 Box: launch the CalDAV/CardDAV device-sync setup -->
+        <item
+            android:id="@+id/nav_meile_sync"
+            android:icon="@drawable/file_calendar"
+            android:orderInCategory="1"
+            android:title="@string/meile_sync_setup_title" />
     </group>
 
     <!--
