@@ -21,11 +21,11 @@
     <string name="meile_sync_setup_button">Ativar sincronização</string>
     <string name="meile_sync_now">Sincronizar agora</string>
     <string name="meile_sync_state_off">Sincronização desativada. Toque para ativar.</string>
-    <string name="meile_sync_state_on">✓ Ativada — atualiza sozinho a cada ~4h.</string>
+    <string name="meile_sync_state_on">✓ Ativada — atualiza ao abrir o app e a cada ~1h.</string>
     <string name="meile_sync_syncing">Sincronizando…</string>
     <string name="meile_sync_done">✓ Sincronizado agora.</string>
     <string name="meile_sync_active_title">Sincronização ativada</string>
-    <string name="meile_sync_active_subtitle">Sua agenda e contatos atualizam sozinhos no celular a cada ~4h.</string>
+    <string name="meile_sync_active_subtitle">Sua agenda e contatos atualizam ao abrir o app e a cada ~1h.</string>
     <string name="meile_sync_setup_calendars">Agenda</string>
     <string name="meile_sync_setup_contacts">Contatos</string>
     <string name="meile_sync_setup_progress">Configurando sincronização…</string>

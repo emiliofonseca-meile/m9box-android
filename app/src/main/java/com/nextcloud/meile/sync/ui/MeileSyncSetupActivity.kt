@@ -6,8 +6,8 @@
  * stuck/dark disabled button:
  *   - OFF      : description + "Ativar sincronização" button.
  *   - SYNCING  : spinner + "Sincronizando…".
- *   - ACTIVE   : a green success card ("✓ Sincronização ativada", auto every ~4h)
- *                with a subtle "Sincronizar agora" link for a manual refresh.
+ *   - ACTIVE   : a green success card ("✓ Sincronização ativada", auto on app open
+ *                + every ~1h) with a subtle "Sincronizar agora" link for a manual refresh.
  * A SyncStatusObserver flips SYNCING → ACTIVE when the background sync-adapter
  * finishes, so the manual sync gives real feedback.
  */
@@ -60,6 +60,8 @@ class MeileSyncSetupActivity : AppCompatActivity() {
         // Clean up sync accounts orphaned by a previous logout so a stale one is
         // never picked and never fails auth in the background.
         MeileSync.removeStaleAccounts(this)
+        // Bring accounts created before the interval changed up to the current cadence.
+        MeileSync.reconcilePeriodicSync(this)
         setContentView(R.layout.activity_meile_sync)
 
         val toolbar = findViewById<MaterialToolbar>(R.id.meile_sync_toolbar)
