@@ -13,7 +13,6 @@
  */
 package com.nextcloud.meile.sync.ui
 
-import android.Manifest
 import android.accounts.Account
 import android.accounts.AccountManager
 import android.content.ContentResolver
@@ -53,12 +52,7 @@ class MeileSyncSetupActivity : AppCompatActivity() {
     private val uiHandler = Handler(Looper.getMainLooper())
     private val syncTimeout = Runnable { if (awaitingSync) finishSyncing() }
 
-    private val requiredPermissions = arrayOf(
-        Manifest.permission.READ_CALENDAR,
-        Manifest.permission.WRITE_CALENDAR,
-        Manifest.permission.READ_CONTACTS,
-        Manifest.permission.WRITE_CONTACTS
-    )
+    private val requiredPermissions = MeileSync.REQUIRED_PERMISSIONS
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

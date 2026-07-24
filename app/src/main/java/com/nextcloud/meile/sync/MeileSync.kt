@@ -13,15 +13,19 @@
  */
 package com.nextcloud.meile.sync
 
+import android.Manifest
 import android.accounts.Account
 import android.accounts.AccountManager
 import android.content.ContentResolver
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.owncloud.android.R
 import com.owncloud.android.lib.common.accounts.AccountUtils
 import okhttp3.OkHttpClient
+import java.net.URI
 import java.util.concurrent.TimeUnit
 
 object MeileSync {
@@ -35,6 +39,21 @@ object MeileSync {
     /** Provider authorities we sync into (see CalendarContract / ContactsContract). */
     const val CALENDAR_AUTHORITY = "com.android.calendar"
     const val CONTACTS_AUTHORITY = "com.android.contacts"
+
+    /** Calendar + Contacts read/write — the sync is bidirectional, so all four. */
+    val REQUIRED_PERMISSIONS = arrayOf(
+        Manifest.permission.READ_CALENDAR,
+        Manifest.permission.WRITE_CALENDAR,
+        Manifest.permission.READ_CONTACTS,
+        Manifest.permission.WRITE_CONTACTS
+    )
+
+    fun hasPermissions(context: Context): Boolean = REQUIRED_PERMISSIONS.all {
+        ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+    }
+
+    /** True once the user is signed in (a file account exists). */
+    fun hasFileAccount(context: Context): Boolean = fileAccounts(context).isNotEmpty()
 
     /**
      * Periodic sync interval (seconds). Android's Doze batches periodic syncs into
@@ -116,6 +135,37 @@ object MeileSync {
         enableSync(account, CALENDAR_AUTHORITY)
         enableSync(account, CONTACTS_AUTHORITY)
         return account
+    }
+
+    /**
+     * Provision (or refresh) the sync account from the currently signed-in file
+     * account and start an immediate first sync. Returns null if not signed in or
+     * the file account is missing its server URL. Callers must hold the
+     * calendar/contacts permissions first — the sync adapter is a no-op without
+     * them. Shared by the setup screen and the post-login auto-enable.
+     */
+    fun setUpFromFileAccount(context: Context): Account? {
+        val fileAccount = fileAccounts(context).firstOrNull() ?: return null
+        val am = AccountManager.get(context)
+        val baseUrl = am.getUserData(fileAccount, AccountUtils.Constants.KEY_OC_BASE_URL) ?: return null
+        val userId = am.getUserData(fileAccount, AccountUtils.Constants.KEY_USER_ID)
+            ?: fileAccount.name.substringBeforeLast('@')
+        val password = am.getPassword(fileAccount) ?: ""
+        val account = createOrUpdateAccount(
+            context = context,
+            displayName = syncDisplayName(fileAccount, baseUrl),
+            baseUrl = baseUrl,
+            userId = userId,
+            password = password
+        )
+        requestImmediateSync(account)
+        return account
+    }
+
+    private fun syncDisplayName(fileAccount: Account, baseUrl: String): String {
+        val host = runCatching { URI(baseUrl).host }.getOrNull() ?: return fileAccount.name
+        val user = fileAccount.name.substringBeforeLast('@', fileAccount.name)
+        return "$user@$host"
     }
 
     private fun enableSync(account: Account, authority: String) {

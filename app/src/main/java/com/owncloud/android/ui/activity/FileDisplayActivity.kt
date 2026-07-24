@@ -44,6 +44,7 @@ import android.view.WindowManager.BadTokenException
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.widget.SearchView
 import androidx.core.util.Function
@@ -288,8 +289,41 @@ class FileDisplayActivity :
 
     private lateinit var folderRefreshScheduler: FolderRefreshScheduler
 
+    // M9 Box: guards the one-per-session evaluation of the sync auto-enable offer.
+    private var meileSyncOfferShown = false
+
+    // M9 Box: permission request for the post-login sync auto-enable. Registered as
+    // a field so it is ready before the activity is STARTED. On grant, provision the
+    // sync account and kick off the first sync — no need to open the sync screen.
+    private val meileSyncPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+            if (result.values.isNotEmpty() && result.values.all { it }) {
+                com.nextcloud.meile.sync.MeileSync.setUpFromFileAccount(this)
+            }
+        }
+
     fun setFileIDForImmediatePreview(fileIDForImmediatePreview: Long) {
         this.fileIDForImmediatePreview = fileIDForImmediatePreview
+    }
+
+    /**
+     * Offer to turn on calendar/contacts sync once, right after login. Shown at most
+     * once per install (MeileSyncOnboarding remembers), never nags on decline, and
+     * only when signed in + not already set up + permission not yet granted.
+     */
+    private fun maybeOfferMeileSync() {
+        if (meileSyncOfferShown) return
+        if (!com.nextcloud.meile.sync.MeileSyncOnboarding.shouldOffer(this)) return
+        meileSyncOfferShown = true
+        com.nextcloud.meile.sync.MeileSyncOnboarding.markAsked(this)
+        MaterialAlertDialogBuilder(this, R.style.Theme_ownCloud_Dialog)
+            .setTitle(R.string.meile_sync_offer_title)
+            .setMessage(R.string.meile_sync_offer_message)
+            .setPositiveButton(R.string.meile_sync_offer_positive) { _, _ ->
+                meileSyncPermissionLauncher.launch(com.nextcloud.meile.sync.MeileSync.REQUIRED_PERMISSIONS)
+            }
+            .setNegativeButton(R.string.meile_sync_offer_negative, null)
+            .show()
     }
 
     @SuppressLint("UnsafeIntentLaunch")
@@ -1476,6 +1510,9 @@ class FileDisplayActivity :
         inAppReviewHelper.showInAppReview(this)
 
         checkNotifications()
+
+        // M9 Box: first-session offer to auto-enable calendar/contacts sync.
+        maybeOfferMeileSync()
 
         Log_OC.v(TAG, "onResume() end")
 
