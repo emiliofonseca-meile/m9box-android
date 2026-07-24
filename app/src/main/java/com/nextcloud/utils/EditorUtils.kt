@@ -21,7 +21,7 @@ class EditorUtils @Inject constructor(private val arbitraryDataProvider: Arbitra
      * Returns an editor matching only the strictly supported mimetypes.
      */
     fun getEditor(user: User?, mimeType: String?): Editor? {
-        val editors = getEditors(user) ?: return null
+        val editors = getOpenableEditors(user) ?: return null
         return editors.firstOrNull { mimeType in it.mimetypes }
     }
 
@@ -29,7 +29,7 @@ class EditorUtils @Inject constructor(private val arbitraryDataProvider: Arbitra
      * Returns an editor matching the supported mimetypes or, as a fallback, the optional ones.
      */
     fun getAvailableEditor(user: User?, mimeType: String?): Editor? {
-        val editors = getEditors(user) ?: return null
+        val editors = getOpenableEditors(user) ?: return null
         return editors.firstOrNull { mimeType in it.mimetypes }
             ?: editors.firstOrNull { mimeType in it.optionalMimetypes }
     }
@@ -50,6 +50,13 @@ class EditorUtils @Inject constructor(private val arbitraryDataProvider: Arbitra
 
     fun isRichDocumentsDirectEditingAvailable(user: User?): Boolean =
         getEditors(user)?.any { it.id == RICH_DOCUMENTS_EDITOR_ID } == true
+
+    // M9 Box: since NC34 richdocuments (Collabora) registers as a direct-editing provider.
+    // It must NOT be resolved by the generic editor path: it has its own open path
+    // (openFileAsRichDocument -> RichDocumentsEditorWebView) with the
+    // "RichDocumentsMobileInterface" JS bridge; TextEditorWebView would hang on the spinner.
+    private fun getOpenableEditors(user: User?): Collection<Editor>? =
+        getEditors(user)?.filter { it.id != RICH_DOCUMENTS_EDITOR_ID }
 
     private fun getEditors(user: User?): Collection<Editor>? {
         val json = arbitraryDataProvider.getValue(user, ArbitraryDataProvider.DIRECT_EDITING)
