@@ -431,7 +431,9 @@ public abstract class DrawerActivity extends ToolbarActivity
 
         // hide ecosystem apps according to user preference or in branded client
         ConstraintLayout banner = mNavigationViewHeader.findViewById(R.id.drawer_ecosystem_apps);
-        boolean shouldHideTopBanner = isClientBranded || !preferences.isShowEcosystemApps();
+        boolean shouldHideTopBanner = isClientBranded
+            || !getResources().getBoolean(R.bool.show_ecosystem_apps)
+            || !preferences.isShowEcosystemApps();
 
         if (shouldHideTopBanner) {
             hideTopBanner(banner);
