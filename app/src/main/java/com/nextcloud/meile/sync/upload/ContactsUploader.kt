@@ -78,7 +78,14 @@ class ContactsUploader(
 
         val contact = readContact(row)
         val href = row.sourceId ?: "${writableBookHref!!.trimEnd('/')}/${UUID.randomUUID()}.vcf"
-        val etag = client.putContact(href, VCardBuilder.build(contact), ifMatch = row.etag, isNew = isNew)
+
+        // Editing MERGES into the card on the server: the provider only holds the
+        // fields the pull mapped, so rebuilding would drop BDAY, IMPP, CATEGORIES,
+        // X-* and anything else the Box carries for this person.
+        val existing = if (isNew) null else runCatching { client.getContact(href).vcard }.getOrNull()
+        val vcf = if (existing != null) VCardBuilder.merge(existing, contact) else VCardBuilder.build(contact)
+
+        val etag = client.putContact(href, vcf, ifMatch = row.etag, isNew = isNew)
 
         val values = ContentValues().apply {
             put(RawContacts.SOURCE_ID, href)

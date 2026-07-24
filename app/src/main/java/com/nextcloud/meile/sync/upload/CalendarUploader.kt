@@ -74,21 +74,43 @@ class CalendarUploader(
             return true
         }
 
-        val exceptions = exceptionsOf(row)
-        val uid = row.uid ?: row.syncId?.let { serverUid(it) }
-        val ics = ICalMapper.buildSeriesIcs(
-            master = row.toDraft(calendarHref, reminders = remindersOf(row.id), uid = uid),
-            exceptions = exceptions.map {
-                ExceptionDraft(
-                    recurrenceIdMs = it.originalInstanceMs,
-                    draft = it.row.toDraft(calendarHref, reminders = remindersOf(it.row.id), uid = uid)
-                )
-            },
-            exDatesMs = row.exDatesMs
+        val all = exceptionsOf(row)
+        val exceptions = all.filter { !it.cancelled }
+        // A slot the user cancelled on the device is an EXDATE, not an override.
+        val exDates = (row.exDatesMs + all.filter { it.cancelled }.map { it.originalInstanceMs }).distinct()
+
+        // The account name IS the mailbox, so it is the only correct organizer.
+        val masterDraft = row.toDraft(
+            calendarHref, remindersOf(row.id), uid = null,
+            attendees = attendeesOf(row.id), organizerEmail = account.name
         )
+        val overrides = exceptions.map {
+            ExceptionDraft(
+                recurrenceIdMs = it.originalInstanceMs,
+                draft = it.row.toDraft(
+                    calendarHref, remindersOf(it.row.id), uid = null, attendees = attendeesOf(it.row.id)
+                )
+            )
+        }
 
         val isNew = row.syncId == null
         val href = row.syncId ?: "${calendarHref.trimEnd('/')}/${UUID.randomUUID()}.ics"
+
+        // Editing an existing resource MERGES into the server copy: the device only
+        // holds the fields the pull mapped, so a rebuild would drop everything else
+        // (STATUS, CATEGORIES, ATTACH, X-*) that the Box carries.
+        val existing = if (isNew) null else runCatching { client.getResource(href).ics }.getOrNull()
+        val ics = if (existing != null) {
+            ICalMapper.mergeSeriesIntoIcs(existing, masterDraft, overrides, exDates)
+        } else {
+            val uid = row.uid ?: row.syncId?.let { serverUid(it) }
+            ICalMapper.buildSeriesIcs(
+                masterDraft.copy(uid = uid),
+                overrides.map { it.copy(draft = it.draft.copy(uid = uid)) },
+                exDates
+            )
+        }
+
         val etag = client.putResource(href, ics, ifMatch = row.etag, isNew = isNew)
 
         markSynced(row.id, href, etag)
@@ -133,17 +155,35 @@ class CalendarUploader(
         resolver.query(
             Events.CONTENT_URI.asSyncAdapter(),
             EVENT_COLUMNS,
-            "($selection) AND ${Events.DELETED}=0",
+            "($selection)",
             args.toTypedArray(),
             null
         )?.use { cursor ->
             while (cursor.moveToNext()) {
                 val row = cursor.toEventRow()
                 val original = cursor.getLongOrNull(IDX_ORIGINAL_INSTANCE) ?: continue
-                rows.add(ExceptionRow(row, original))
+                val cancelled = row.deleted || cursor.getIntOrNull(IDX_STATUS) == Events.STATUS_CANCELED
+                rows.add(ExceptionRow(row, original, cancelled))
             }
         }
         return rows
+    }
+
+    /** Guests the device knows about; empty means "device does not manage them". */
+    private fun attendeesOf(eventId: Long): List<String> {
+        val emails = ArrayList<String>()
+        resolver.query(
+            CalendarContract.Attendees.CONTENT_URI.asSyncAdapter(),
+            arrayOf(CalendarContract.Attendees.ATTENDEE_EMAIL),
+            "${CalendarContract.Attendees.EVENT_ID}=?",
+            arrayOf(eventId.toString()),
+            null
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                if (!cursor.isNull(0)) cursor.getString(0)?.takeIf { it.isNotBlank() }?.let { emails.add(it) }
+            }
+        }
+        return emails.distinct()
     }
 
     /**
@@ -238,6 +278,9 @@ class CalendarUploader(
     private fun android.database.Cursor.getLongOrNull(index: Int): Long? =
         if (isNull(index)) null else getLong(index)
 
+    private fun android.database.Cursor.getIntOrNull(index: Int): Int? =
+        if (isNull(index)) null else getInt(index)
+
     companion object {
         private const val TAG = "MeileCalendarPush"
         private const val HTTP_PRECONDITION_FAILED = 412
@@ -260,7 +303,8 @@ class CalendarUploader(
             Events.RRULE,
             Events.EXDATE,
             Events.ORIGINAL_INSTANCE_TIME,
-            Events.UID_2445
+            Events.UID_2445,
+            Events.STATUS
         )
 
         private const val IDX_ID = 0
@@ -279,6 +323,7 @@ class CalendarUploader(
         private const val IDX_EXDATE = 13
         private const val IDX_ORIGINAL_INSTANCE = 14
         private const val IDX_UID = 15
+        private const val IDX_STATUS = 16
     }
 }
 
@@ -300,11 +345,17 @@ data class EventRow(
     val exDatesMs: List<Long>
 ) {
     /**
-     * Attendees are deliberately not pushed: a VEVENT with ATTENDEE makes the
-     * server send iMIP invitations, and the organizer identity is not modelled
-     * yet. Guests added on the device stay on the device until that lands.
+     * Guests added on the device are pushed as ATTENDEE, which makes the server
+     * send the iMIP invitations. [organizerEmail] must be the account owner, or
+     * the invite goes out from the wrong identity.
      */
-    fun toDraft(calendarHref: String, reminders: List<Reminder>, uid: String?): EventDraft = EventDraft(
+    fun toDraft(
+        calendarHref: String,
+        reminders: List<Reminder>,
+        uid: String?,
+        attendees: List<String> = emptyList(),
+        organizerEmail: String? = null
+    ): EventDraft = EventDraft(
         uid = uid,
         calendarHref = calendarHref,
         resourceHref = syncId,
@@ -318,9 +369,14 @@ data class EventRow(
         timeZoneId = timeZoneId,
         rrule = rrule,
         reminders = reminders,
-        attendees = emptyList()
+        attendees = attendees,
+        organizerEmail = organizerEmail
     )
 }
 
-/** An instance override plus the master slot (RECURRENCE-ID) it replaces. */
-data class ExceptionRow(val row: EventRow, val originalInstanceMs: Long)
+/**
+ * An instance override plus the master slot (RECURRENCE-ID) it replaces.
+ * [cancelled] marks a slot the user removed on the device: that is an EXDATE on
+ * the master, not an override to upload.
+ */
+data class ExceptionRow(val row: EventRow, val originalInstanceMs: Long, val cancelled: Boolean)
