@@ -157,6 +157,9 @@ class AndroidCalendarStore(private val context: Context, private val account: Ac
             put(Events._SYNC_ID, syncId)
             put(Events.SYNC_DATA1, resource.etag)
             put(Events.DIRTY, 0)
+            // Keep the iCalendar UID: the device -> server push has to PUT the
+            // series back under the SAME UID, or the server rejects/duplicates it.
+            event.uid?.value?.let { put(Events.UID_2445, it) }
             put(Events.TITLE, event.summary?.value ?: "")
             event.getProperty<Property>(Property.DESCRIPTION)?.value?.let { put(Events.DESCRIPTION, it) }
             event.getProperty<Property>(Property.LOCATION)?.value?.let { put(Events.EVENT_LOCATION, it) }
