@@ -21,7 +21,17 @@ class EditorUtils @Inject constructor(private val arbitraryDataProvider: Arbitra
         if (json.isEmpty()) {
             return null
         }
+        // Since NC34 the richdocuments (Collabora) app also registers itself as a
+        // direct-editing provider covering office mimetypes. It must NOT be resolved
+        // here: it has its own dedicated open path (openFileAsRichDocument ->
+        // RichDocumentsEditorWebView) whose WebView registers the
+        // "RichDocumentsMobileInterface" JS bridge. The generic TextEditorWebView
+        // registers "DirectEditingMobileInterface" instead, so a Collabora document
+        // opened through it never receives documentLoaded() and the loading spinner
+        // hangs forever. Excluding it lets office files fall through to the rich
+        // documents branch, restoring the pre-NC34 routing.
         val editors = Gson().fromJson(json, DirectEditing::class.java).editors.values
+            .filter { it.id != RICHDOCUMENTS_EDITOR_ID }
         return editors.firstOrNull { mimeType in it.mimetypes }
             ?: editors.firstOrNull { mimeType in it.optionalMimetypes }
     }
@@ -32,5 +42,6 @@ class EditorUtils @Inject constructor(private val arbitraryDataProvider: Arbitra
 
     companion object {
         private val OFFICE_EDITOR_IDS = setOf("onlyoffice", "eurooffice")
+        private const val RICHDOCUMENTS_EDITOR_ID = "richdocuments"
     }
 }
