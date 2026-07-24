@@ -80,15 +80,20 @@
                     android:padding="18dp">
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:id="@+id/meile_sync_open_calendar"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:background="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
                         android:drawablePadding="14dp"
                         android:gravity="center_vertical"
-                        android:paddingVertical="8dp"
+                        android:paddingVertical="10dp"
                         android:text="@string/meile_sync_setup_calendars"
                         android:textSize="16sp"
                         android:textColor="?android:attr/textColorPrimary"
                         app:drawableStartCompat="@drawable/file_calendar"
+                        app:drawableEndCompat="@drawable/arrow_right"
                         app:drawableTint="#116DF0" />
 
                     <View
@@ -98,15 +103,20 @@
                         android:background="#14000000" />
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:id="@+id/meile_sync_open_contacts"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:background="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
                         android:drawablePadding="14dp"
                         android:gravity="center_vertical"
-                        android:paddingVertical="8dp"
+                        android:paddingVertical="10dp"
                         android:text="@string/meile_sync_setup_contacts"
                         android:textSize="16sp"
                         android:textColor="?android:attr/textColorPrimary"
                         app:drawableStartCompat="@drawable/ic_user"
+                        app:drawableEndCompat="@drawable/arrow_right"
                         app:drawableTint="#116DF0" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

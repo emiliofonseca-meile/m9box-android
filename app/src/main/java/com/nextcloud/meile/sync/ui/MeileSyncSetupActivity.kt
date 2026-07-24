@@ -17,8 +17,12 @@ import android.Manifest
 import android.accounts.Account
 import android.accounts.AccountManager
 import android.content.ContentResolver
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.CalendarContract
+import android.provider.ContactsContract
 import android.os.Handler
 import android.os.Looper
 import android.view.View
@@ -33,6 +37,7 @@ import com.google.android.material.card.MaterialCardView
 import com.nextcloud.meile.sync.MeileSync
 import com.owncloud.android.R
 import com.owncloud.android.lib.common.accounts.AccountUtils
+import com.owncloud.android.utils.DisplayUtils
 import java.net.URI
 
 class MeileSyncSetupActivity : AppCompatActivity() {
@@ -76,7 +81,33 @@ class MeileSyncSetupActivity : AppCompatActivity() {
 
         actionButton.setOnClickListener { onAction() }
         findViewById<MaterialButton>(R.id.meile_sync_resync).setOnClickListener { triggerSync() }
+        findViewById<TextView>(R.id.meile_sync_open_calendar).setOnClickListener {
+            openDefaultApp(Intent.CATEGORY_APP_CALENDAR, CalendarContract.CONTENT_URI)
+        }
+        findViewById<TextView>(R.id.meile_sync_open_contacts).setOnClickListener {
+            openDefaultApp(Intent.CATEGORY_APP_CONTACTS, ContactsContract.Contacts.CONTENT_URI)
+        }
         renderIdle()
+    }
+
+    /**
+     * Open the phone's default Calendar/Contacts app. The category intent targets
+     * whatever the user set as default; if the device exposes no such default
+     * (some ROMs don't declare the category) fall back to viewing the provider
+     * URI, and finally tell the user instead of crashing.
+     */
+    private fun openDefaultApp(category: String, fallbackUri: Uri) {
+        val byCategory = Intent(Intent.ACTION_MAIN).addCategory(category)
+        if (byCategory.resolveActivity(packageManager) != null) {
+            startActivity(byCategory)
+            return
+        }
+        val byView = Intent(Intent.ACTION_VIEW, fallbackUri)
+        if (byView.resolveActivity(packageManager) != null) {
+            startActivity(byView)
+            return
+        }
+        DisplayUtils.showSnackMessage(this, R.string.meile_sync_open_app_missing)
     }
 
     override fun onResume() {

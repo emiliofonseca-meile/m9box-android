@@ -33,6 +33,7 @@
     <string name="meile_sync_setup_no_account">Entre na sua conta M9 Box primeiro.</string>
     <string name="meile_sync_setup_error">Não foi possível ativar a sincronização: %1$s</string>
     <string name="meile_sync_setup_permissions">Conceda acesso à Agenda e aos Contatos para sincronizar.</string>
+    <string name="meile_sync_open_app_missing">Nenhum app de agenda/contatos encontrado no aparelho.</string>
     <string name="meile_sync_notification_channel">Sincronização M9 Box</string>
     <string name="file_list_error_headline">Poor connection</string>
     <string name="file_list_error_description">Check your internet connection or try again later</string>
