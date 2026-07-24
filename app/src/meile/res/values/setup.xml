@@ -31,6 +31,12 @@
     <!-- Behavior: fleet still on NC 25, keep runtime theming from the instance -->
     <bool name="show_outdated_server_warning">false</bool>
     <bool name="is_branded_client">false</bool>
+    <!-- Talk/Notes/Assistant are not part of the M9 offering yet; the drawer must
+         not advertise apps the customer cannot use. Re-enable when they ship. -->
+    <bool name="show_ecosystem_apps">false</bool>
+    <!-- "Community" links to the Nextcloud project: not our brand, not our support
+         channel. Upstream already gates it behind this flag. -->
+    <bool name="participate_enabled">false</bool>
     <bool name="show_server_url_input">true</bool>
 
     <!-- Links (GPL/AGPL: source must be public) -->

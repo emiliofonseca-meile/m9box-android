@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  M9 Box - Meile branded Nextcloud client
+  SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
+
+  Overrides the upstream splash artwork (Nextcloud mark + wordmark). Same
+  resource name on purpose: the flavor wins over main at merge time, so the
+  launcher layout stays untouched and this survives an upstream rebase.
+-->
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@drawable/m9_splash_logo"
+    android:gravity="center"
+    android:antialias="true" />

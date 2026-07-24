@@ -51,6 +51,8 @@
     <bool name="show_external_links">true</bool>
     <bool name="show_outdated_server_warning">true</bool>
     <bool name="is_branded_client">false</bool>
+    <!-- Ecosystem shortcuts (Assistant/Talk/Notes/More) in the drawer header. -->
+    <bool name="show_ecosystem_apps">true</bool>
     <bool name="is_branded_plus_client">false</bool>
 
     <!-- Calendar & Contacts backup -->
