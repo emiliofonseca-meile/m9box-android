@@ -6,7 +6,10 @@
  * they appear in the phone's native Contacts app and dialer. One RawContact per
  * vCard, keyed by SOURCE_ID = resource href, ETag in SYNC1. Parsed with ez-vcard.
  *
- * Scope: server -> device (v1). Two-way push is a follow-up; see docs/08.
+ * Scope: server -> device. The opposite direction lives in ContactsUploader.
+ * Only the fields mapped here survive a round trip: anything else on the card
+ * (BDAY, IMPP, categories, X-* extensions) is not read into the provider and is
+ * therefore dropped when the device pushes an edited contact back.
  */
 package com.nextcloud.meile.sync.store
 

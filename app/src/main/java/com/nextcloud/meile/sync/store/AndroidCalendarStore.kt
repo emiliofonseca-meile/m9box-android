@@ -8,8 +8,10 @@
  * occurrences). RECURRENCE-ID overrides become exception rows related to the
  * master via ORIGINAL_SYNC_ID + ORIGINAL_INSTANCE_TIME.
  *
- * Scope: server -> device (v1). Two-way push (device edits back to CalDAV) is a
- * follow-up that needs on-device validation; see docs/08.
+ * Scope: server -> device. The opposite direction lives in CalendarUploader.
+ * Only the fields mapped here survive a round trip: anything else in the VEVENT
+ * (ATTENDEE, ORGANIZER, STATUS, CATEGORIES, ATTACH, X-* extensions) is not read
+ * into the provider and is therefore dropped when the device pushes an edit back.
  */
 package com.nextcloud.meile.sync.store
 
