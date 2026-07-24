@@ -63,6 +63,12 @@ data class ScopedWrite(val updatedIcs: String, val newResourceIcs: String?)
 /** Result of a scoped delete: either PUT the modified master or DELETE the whole resource. */
 data class ScopedDelete(val updatedIcs: String?, val deleteResource: Boolean)
 
+/**
+ * An instance override to embed in the SAME resource as its master (RFC 4791).
+ * [recurrenceIdMs] is the epoch millis of the slot the override replaces.
+ */
+data class ExceptionDraft(val recurrenceIdMs: Long, val draft: EventDraft)
+
 object ICalMapper {
 
     init {
@@ -189,6 +195,42 @@ object ICalMapper {
         val tz = tzOf(draft.timeZoneId)
         if (!draft.allDay && tz != null) cal.components.add(tz.vTimeZone)
         cal.components.add(buildVEvent(draft, draft.uid ?: newUid(), tz))
+        return cal.toString()
+    }
+
+    /**
+     * Build a whole resource from the device's view of a series: the master plus
+     * its instance overrides plus the deleted slots. Used by the device -> server
+     * push, where the CalendarProvider hands us the master row, the exception rows
+     * (ORIGINAL_SYNC_ID / ORIGINAL_ID) and EXDATE separately — they must be
+     * serialized back into ONE .ics, never separate resources.
+     */
+    fun buildSeriesIcs(
+        master: EventDraft,
+        exceptions: List<ExceptionDraft> = emptyList(),
+        exDatesMs: List<Long> = emptyList()
+    ): String {
+        val cal = newCalendar()
+        val tz = tzOf(master.timeZoneId)
+        if (!master.allDay && tz != null) cal.components.add(tz.vTimeZone)
+
+        val uid = master.uid ?: newUid()
+        val masterEvent = buildVEvent(master, uid, tz)
+        if (exDatesMs.isNotEmpty()) {
+            val dateList = DateList(if (master.allDay) Value.DATE else Value.DATE_TIME)
+            for (ms in exDatesMs) dateList.add(dateValue(ms, master.allDay, tz))
+            masterEvent.properties.add(ExDate(dateList))
+        }
+        cal.components.add(masterEvent)
+
+        for (exception in exceptions) {
+            val exTz = tzOf(exception.draft.timeZoneId)
+            val event = buildVEvent(exception.draft, uid, exTz)
+            event.properties.add(
+                recurrenceIdFor(exception.recurrenceIdMs, exception.draft.allDay, exTz)
+            )
+            cal.components.add(event)
+        }
         return cal.toString()
     }
 
