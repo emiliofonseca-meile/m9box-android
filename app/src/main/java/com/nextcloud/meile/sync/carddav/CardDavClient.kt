@@ -70,6 +70,19 @@ class CardDavClient(
         return parseVCards(resp)
     }
 
+    /** Fetch a single card, so an edit can be merged into it instead of replacing it. */
+    fun getContact(href: String): RemoteVCard {
+        val req = baseRequest(href).get().build()
+        http.newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) throw CardDavException(resp.code, "getContact")
+            return RemoteVCard(
+                href = href,
+                etag = resp.header("ETag")?.trim('"', ' '),
+                vcard = resp.body?.string().orEmpty()
+            )
+        }
+    }
+
     fun putContact(href: String, vcard: String, ifMatch: String?, isNew: Boolean): String? {
         val builder = baseRequest(href).put(vcard.toRequestBody(vcardMedia))
         when {

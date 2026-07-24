@@ -74,5 +74,11 @@ data class EventDraft(
     val timeZoneId: String,
     val rrule: String?,
     val reminders: List<Reminder>,
-    val attendees: List<String>
+    val attendees: List<String>,
+    /**
+     * Who owns the meeting. Required whenever [attendees] is non-empty: the
+     * server only sends iMIP invitations for events it can attribute to an
+     * organizer, and getting it wrong mails the invite from the wrong identity.
+     */
+    val organizerEmail: String? = null
 )

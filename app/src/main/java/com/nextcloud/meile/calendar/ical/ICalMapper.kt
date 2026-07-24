@@ -234,6 +234,106 @@ object ICalMapper {
         return cal.toString()
     }
 
+    /**
+     * Merge the device's view of a series INTO the resource that is already on the
+     * server, instead of rebuilding it. The device only knows the fields the pull
+     * mapped into the CalendarProvider; rebuilding from scratch would silently
+     * drop everything else the server carries (ATTENDEE/ORGANIZER when we don't
+     * manage them, STATUS, CATEGORIES, ATTACH, X-* extensions). Anything the
+     * device does own is authoritative and overwritten here.
+     *
+     * Overrides that exist on the server but not on the device are left alone:
+     * they may simply fall outside the sync window, and deleting them would
+     * destroy data we never looked at.
+     */
+    fun mergeSeriesIntoIcs(
+        existingIcs: String,
+        master: EventDraft,
+        exceptions: List<ExceptionDraft> = emptyList(),
+        exDatesMs: List<Long> = emptyList()
+    ): String {
+        val cal = runCatching { parse(existingIcs) }.getOrNull()
+            ?: return buildSeriesIcs(master, exceptions, exDatesMs)
+        val vevents = cal.components.filterIsInstance<VEvent>()
+        val masterEvent = vevents.firstOrNull { it.recurrenceId == null }
+            ?: return buildSeriesIcs(master, exceptions, exDatesMs)
+
+        val tz = tzOf(master.timeZoneId)
+        applyFieldsToMaster(masterEvent, master, tz)
+        applyDeviceOwnedFields(masterEvent, master, tz, exDatesMs)
+        ensureVTimeZone(cal, master, tz)
+
+        for (exception in exceptions) {
+            val exTz = tzOf(exception.draft.timeZoneId)
+            val existing = vevents.firstOrNull {
+                it.recurrenceId?.date?.time == exception.recurrenceIdMs
+            }
+            if (existing != null) {
+                applyFieldsToMaster(existing, exception.draft, exTz)
+                applyDeviceOwnedFields(existing, exception.draft, exTz, exDatesMs = emptyList())
+            } else {
+                val added = buildVEvent(exception.draft, masterEvent.uid?.value ?: newUid(), exTz)
+                added.properties.add(recurrenceIdFor(exception.recurrenceIdMs, exception.draft.allDay, exTz))
+                cal.components.add(added)
+            }
+        }
+        return cal.toString()
+    }
+
+    /**
+     * Overwrite the fields the device is the source of truth for. Split out from
+     * [applyFieldsToMaster] because the in-app editor has different semantics: it
+     * never drops a recurrence it wasn't asked about, whereas a push reflects
+     * exactly what the phone's Calendar app now holds.
+     */
+    private fun applyDeviceOwnedFields(
+        event: VEvent,
+        draft: EventDraft,
+        tz: TimeZone?,
+        exDatesMs: List<Long>
+    ) {
+        // Recurrence: the provider row IS the current state, so a cleared RRULE
+        // means the user turned repetition off.
+        if (draft.rrule.isNullOrBlank()) removeProperties(event, Property.RRULE)
+        else replaceProperty(event, Property.RRULE, RRule(draft.rrule))
+
+        removeProperties(event, Property.EXDATE)
+        if (exDatesMs.isNotEmpty()) {
+            val dateList = DateList(if (draft.allDay) Value.DATE else Value.DATE_TIME)
+            for (ms in exDatesMs) dateList.add(dateValue(ms, draft.allDay, tz))
+            event.properties.add(ExDate(dateList))
+        }
+
+        // Reminders: replace only the DISPLAY alarms we map; EMAIL/AUDIO alarms
+        // configured on the server side survive untouched.
+        val displayAlarms = event.components.filterIsInstance<VAlarm>()
+            .filter { it.getProperty<Action>(Property.ACTION)?.value.equals("DISPLAY", ignoreCase = true) }
+        event.components.removeAll(displayAlarms)
+        for (reminder in draft.reminders) {
+            val alarm = VAlarm(Duration.ofMinutes(-reminder.minutesBefore.toLong()))
+            alarm.properties.add(Action.DISPLAY)
+            alarm.properties.add(Description(draft.summary))
+            event.components.add(alarm)
+        }
+
+        // Guests: only touched when the device actually manages them, so an event
+        // organized elsewhere keeps its attendee list intact.
+        if (draft.attendees.isEmpty()) return
+        removeProperties(event, Property.ATTENDEE)
+        for (email in draft.attendees) {
+            val attendee = Attendee("mailto:$email")
+            attendee.parameters.add(Role.REQ_PARTICIPANT)
+            attendee.parameters.add(PartStat.NEEDS_ACTION)
+            attendee.parameters.add(Rsvp.TRUE)
+            event.properties.add(attendee)
+        }
+        if (event.getProperty<Organizer>(Property.ORGANIZER) == null) {
+            draft.organizerEmail?.takeIf { it.isNotBlank() }?.let {
+                event.properties.add(Organizer("mailto:$it"))
+            }
+        }
+    }
+
     fun applyScopedEdit(
         existingIcs: String,
         draft: EventDraft,
@@ -327,8 +427,8 @@ object ICalMapper {
         draft.description?.takeIf { it.isNotBlank() }?.let { event.properties.add(Description(it)) }
         draft.rrule?.takeIf { it.isNotBlank() }?.let { event.properties.add(RRule(it)) }
 
-        if (draft.attendees.isNotEmpty()) {
-            event.properties.add(Organizer("mailto:${draft.attendees.first()}").also { /* placeholder organizer */ })
+        draft.organizerEmail?.takeIf { it.isNotBlank() }?.let {
+            event.properties.add(Organizer("mailto:$it"))
         }
         for (email in draft.attendees) {
             val attendee = Attendee("mailto:$email")

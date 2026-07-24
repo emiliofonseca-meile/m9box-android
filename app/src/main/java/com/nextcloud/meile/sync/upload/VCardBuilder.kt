@@ -76,6 +76,19 @@ data class LocalContact(
 
 object VCardBuilder {
 
+    /**
+     * Merge the device's view INTO the card already on the server. The Contacts
+     * provider only holds the fields the pull mapped, so rebuilding from scratch
+     * would drop BDAY, IMPP, CATEGORIES, X-* and anything else the Box carries.
+     * Falls back to a fresh card if the stored one cannot be parsed.
+     */
+    fun merge(existingVcf: String, contact: LocalContact): String {
+        val vcard = runCatching { Ezvcard.parse(existingVcf).first() }.getOrNull()
+            ?: return build(contact)
+        applyDeviceOwnedFields(vcard, contact)
+        return Ezvcard.write(vcard).version(VCardVersion.V3_0).prodId(false).go()
+    }
+
     fun build(contact: LocalContact): String {
         val vcard = VCard()
         vcard.uid = Uid(contact.uid ?: "urn:uuid:${UUID.randomUUID()}")
@@ -144,6 +157,36 @@ object VCardBuilder {
         }
 
         return Ezvcard.write(vcard).version(VCardVersion.V3_0).prodId(false).go()
+    }
+
+    /** Overwrite exactly the properties ContactsContract is the source of truth for. */
+    private fun applyDeviceOwnedFields(vcard: VCard, contact: LocalContact) {
+        val rebuilt = runCatching { Ezvcard.parse(build(contact)).first() }.getOrNull() ?: return
+
+        vcard.structuredName = rebuilt.structuredName
+        vcard.formattedName = rebuilt.formattedName
+
+        vcard.telephoneNumbers.clear()
+        vcard.telephoneNumbers.addAll(rebuilt.telephoneNumbers)
+        vcard.emails.clear()
+        vcard.emails.addAll(rebuilt.emails)
+        vcard.addresses.clear()
+        vcard.addresses.addAll(rebuilt.addresses)
+        vcard.urls.clear()
+        vcard.urls.addAll(rebuilt.urls)
+        vcard.notes.clear()
+        vcard.notes.addAll(rebuilt.notes)
+        vcard.titles.clear()
+        vcard.titles.addAll(rebuilt.titles)
+        vcard.organization = rebuilt.organization
+        vcard.nickname = rebuilt.nickname
+
+        // A contact whose photo the device never loaded must not lose the one on
+        // the server; only replace when the device actually has an image.
+        if (rebuilt.photos.isNotEmpty()) {
+            vcard.photos.clear()
+            vcard.photos.addAll(rebuilt.photos)
+        }
     }
 
     private fun telephoneType(androidType: Int): TelephoneType = when (androidType) {
