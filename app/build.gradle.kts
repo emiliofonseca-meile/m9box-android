@@ -175,8 +175,11 @@ android {
 
             // M9 Box - Meile branded client (resource overlay, no push yet)
             register("meile") {
-                applicationId = "network.m9.box"
+                applicationId = "com.m9network.m9box"
                 dimension = "default"
+                // Own Google Play counter, independent of the upstream versionCode scheme above
+                // (34.0.1 -> 340000190). Bump by one on every upload; Play rejects a reused code.
+                versionCode = 2
             }
         }
     }
