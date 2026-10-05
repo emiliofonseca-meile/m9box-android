@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  M9 Box
+  SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Same as the upstream Play Store flavor (src/gplay): nothing in the app installs
+         packages, and Google Play restricts this permission to apps whose core purpose needs it. -->
+    <uses-permission
+        android:name="android.permission.REQUEST_INSTALL_PACKAGES"
+        tools:node="remove" />
+
+</manifest>
