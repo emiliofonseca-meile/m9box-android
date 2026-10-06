@@ -16,7 +16,9 @@ data class CalendarCollection(
     val ctag: String?,
     val syncToken: String?,
     val readOnly: Boolean,
-    val supportsVEvent: Boolean
+    val supportsVEvent: Boolean,
+    /** Collection advertises VTODO support (tasks module). */
+    val supportsVTodo: Boolean = false
 )
 
 /** A raw iCalendar object (one `.ics` resource) as stored on the server. */

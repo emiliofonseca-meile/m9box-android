@@ -43,8 +43,12 @@ object MultiStatusParser {
     fun parseSyncToken(xml: String): String? =
         documentElement(xml).firstText(NS_DAV, "sync-token")
 
-    /** Parse a PROPFIND Depth:1 of the calendar-home into calendar collections. */
-    fun parseCalendars(xml: String, ownHref: String): List<CalendarCollection> {
+    /**
+     * Parse a PROPFIND Depth:1 of the calendar-home into calendar collections
+     * that support [component] (VEVENT for the calendar, VTODO for tasks). A
+     * collection without supported-calendar-component-set accepts anything.
+     */
+    fun parseCalendars(xml: String, ownHref: String, component: String = "VEVENT"): List<CalendarCollection> {
         val root = documentElement(xml)
         val result = mutableListOf<CalendarCollection>()
         for (response in responses(root)) {
@@ -58,9 +62,9 @@ object MultiStatusParser {
             if (!isCalendar) continue
 
             val compSet = prop.firstChild(NS_CALDAV, "supported-calendar-component-set")
-            val supportsVEvent = compSet == null || compSet.childElements(NS_CALDAV, "comp")
-                .any { it.getAttribute("name").equals("VEVENT", ignoreCase = true) }
-            if (!supportsVEvent) continue
+            fun supports(name: String) = compSet == null || compSet.childElements(NS_CALDAV, "comp")
+                .any { it.getAttribute("name").equals(name, ignoreCase = true) }
+            if (!supports(component)) continue
 
             val privileges = prop.firstChild(NS_DAV, "current-user-privilege-set")
             val readOnly = privileges != null && privileges.childElements(NS_DAV, "privilege")
@@ -76,7 +80,8 @@ object MultiStatusParser {
                     ctag = prop.firstText(NS_CS, "getctag"),
                     syncToken = prop.firstText(NS_DAV, "sync-token"),
                     readOnly = readOnly,
-                    supportsVEvent = true
+                    supportsVEvent = supports("VEVENT"),
+                    supportsVTodo = supports("VTODO")
                 )
             )
         }

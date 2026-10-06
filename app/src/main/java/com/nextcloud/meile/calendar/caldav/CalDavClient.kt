@@ -57,7 +57,8 @@ class CalDavClient(
         }
     }
 
-    fun discoverCalendars(): List<CalendarCollection> {
+    /** Collections under the calendar-home that accept [component] (VEVENT or VTODO). */
+    fun discoverCalendars(component: String = "VEVENT"): List<CalendarCollection> {
         val body = PROP_CALENDARS.toRequestBody(xml)
         val req = baseRequest(calendarHome)
             .method("PROPFIND", body)
@@ -65,7 +66,7 @@ class CalDavClient(
             .build()
         val (code, resp) = execString(req)
         if (code != 207) throw CalDavException(code, "discoverCalendars")
-        return MultiStatusParser.parseCalendars(resp, calendarHome)
+        return MultiStatusParser.parseCalendars(resp, calendarHome, component)
     }
 
     fun listEvents(calendarHref: String, startUtcMillis: Long, endUtcMillis: Long): List<RemoteResource> {
@@ -77,6 +78,34 @@ class CalDavClient(
         val (code, resp) = execString(req)
         if (code != 207) throw CalDavException(code, "listEvents")
         return MultiStatusParser.parseResources(resp)
+    }
+
+    /** Every VTODO of a collection (no time-range: completed and undated tasks included). */
+    fun listTodos(calendarHref: String): List<RemoteResource> {
+        val body = TODO_QUERY.toRequestBody(xml)
+        val req = baseRequest(calendarHref)
+            .method("REPORT", body)
+            .header("Depth", "1")
+            .build()
+        val (code, resp) = execString(req)
+        if (code != 207) throw CalDavException(code, "listTodos")
+        return MultiStatusParser.parseResources(resp)
+    }
+
+    /** MKCALENDAR a task-only collection; returns its href. */
+    fun makeTaskList(slug: String, displayName: String): String {
+        val href = calendarHome + slug + "/"
+        val name = displayName.replace("&", "&amp;").replace("<", "&lt;")
+        val body = """<?xml version="1.0" encoding="utf-8" ?>
+<c:mkcalendar xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+  <d:set><d:prop>
+    <d:displayname>$name</d:displayname>
+    <c:supported-calendar-component-set><c:comp name="VTODO"/></c:supported-calendar-component-set>
+  </d:prop></d:set>
+</c:mkcalendar>""".toRequestBody(xml)
+        val (code, _) = execString(baseRequest(href).method("MKCALENDAR", body).build())
+        if (code != 201) throw CalDavException(code, "makeTaskList")
+        return href
     }
 
     fun syncCollection(calendarHref: String, syncToken: String?): MultiStatusParser.SyncResult {
@@ -159,6 +188,16 @@ class CalDavClient(
     }
 
     companion object {
+        private val TODO_QUERY = """<?xml version="1.0" encoding="utf-8" ?>
+<c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+  <d:prop><d:getetag/><c:calendar-data/></d:prop>
+  <c:filter>
+    <c:comp-filter name="VCALENDAR">
+      <c:comp-filter name="VTODO"/>
+    </c:comp-filter>
+  </c:filter>
+</c:calendar-query>"""
+
         private val PROP_CALENDARS = """<?xml version="1.0" encoding="utf-8" ?>
 <d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"
             xmlns:cs="http://calendarserver.org/ns/" xmlns:ic="http://apple.com/ns/ical/">
