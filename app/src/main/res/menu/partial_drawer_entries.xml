@@ -89,6 +89,12 @@
             android:icon="@drawable/file_calendar"
             android:orderInCategory="1"
             android:title="@string/meile_sync_setup_title" />
+        <!-- M9 Box: tasks (VTODO over CalDAV) -->
+        <item
+            android:id="@+id/nav_meile_tasks"
+            android:icon="@drawable/ic_check_circle_outline"
+            android:orderInCategory="1"
+            android:title="@string/tasks_title" />
     </group>
 
     <!--

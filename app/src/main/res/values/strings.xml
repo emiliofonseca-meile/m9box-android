@@ -1665,4 +1665,25 @@
     <string name="player_control_view_play_pause_button_content_description">Play/Pause button</string>
     <string name="player_control_view_next_button_content_description">Next button</string>
     <string name="player_control_view_random_button_content_description">Random button</string>
+
+    <!-- Tasks -->
+    <string name="tasks_title">Tasks</string>
+    <string name="tasks_empty">No open tasks</string>
+    <string name="tasks_no_list">You do not have a task list yet.</string>
+    <string name="tasks_create_list">Create task list</string>
+    <string name="tasks_default_list_name">Tasks</string>
+    <string name="tasks_new">New task</string>
+    <string name="tasks_edit">Edit task</string>
+    <string name="tasks_field_title">Title</string>
+    <string name="tasks_field_notes">Notes</string>
+    <string name="tasks_field_list">List</string>
+    <string name="tasks_set_due">Set due date</string>
+    <string name="tasks_due_prefix">Due: %1$s</string>
+    <string name="tasks_clear_due">Remove date</string>
+    <string name="tasks_save">Save</string>
+    <string name="tasks_cancel">Cancel</string>
+    <string name="tasks_all_lists">All</string>
+    <string name="tasks_completed_section">Completed (%1$d)</string>
+    <string name="tasks_error_conflict">This task was changed elsewhere. The list was refreshed, please try again.</string>
+    <string name="tasks_error_generic">Could not complete the operation: %1$s</string>
 </resources>

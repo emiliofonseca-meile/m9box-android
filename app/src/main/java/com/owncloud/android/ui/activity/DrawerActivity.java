@@ -640,6 +640,10 @@ public abstract class DrawerActivity extends ToolbarActivity
             // into the phone's native Calendar/Contacts apps).
             resetOnlyPersonalAndOnDevice();
             startActivity(new Intent(this, com.nextcloud.meile.sync.ui.MeileSyncSetupActivity.class));
+        } else if (itemId == R.id.nav_meile_tasks) {
+            // M9 Box: tasks (VTODO over CalDAV).
+            resetOnlyPersonalAndOnDevice();
+            startActivity(new Intent(this, com.nextcloud.meile.tasks.TasksActivity.class));
         } else if (itemId == R.id.nav_community) {
             resetOnlyPersonalAndOnDevice();
             pushFragment(NavigatorScreen.Community.INSTANCE);
