@@ -194,6 +194,20 @@ class TaskMapperTest {
     }
 
     @Test
+    fun `soft-deleted lists are not offered`() {
+        val xml = """<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" xmlns:nc="http://nextcloud.com/ns">
+ <d:response><d:href>/remote.php/dav/calendars/alice/velha/</d:href>
+  <d:propstat><d:prop><d:resourcetype><d:collection/><c:calendar/></d:resourcetype><d:displayname>Velha</d:displayname>
+   <nc:deleted-at>2026-10-06T23:51:21+00:00</nc:deleted-at></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>
+ <d:response><d:href>/remote.php/dav/calendars/alice/viva/</d:href>
+  <d:propstat><d:prop><d:resourcetype><d:collection/><c:calendar/></d:resourcetype><d:displayname>Viva</d:displayname></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  <d:propstat><d:prop><nc:deleted-at/></d:prop><d:status>HTTP/1.1 404 Not Found</d:status></d:propstat></d:response>
+</d:multistatus>"""
+        assertEquals(listOf("Viva"), MultiStatusParser.parseCalendars(xml, "/remote.php/dav/calendars/alice/", "VEVENT").map { it.displayName })
+    }
+
+    @Test
     fun `REPORT with VTODO data parses into resources`() {
         val xml = """<?xml version="1.0"?><d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
  <d:response><d:href>/remote.php/dav/calendars/alice/tarefas/a.ics</d:href><d:propstat><d:prop>
