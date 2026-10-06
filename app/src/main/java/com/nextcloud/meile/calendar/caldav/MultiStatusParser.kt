@@ -22,6 +22,7 @@ object MultiStatusParser {
     private const val NS_CALDAV = "urn:ietf:params:xml:ns:caldav"
     private const val NS_CS = "http://calendarserver.org/ns/"
     private const val NS_ICAL = "http://apple.com/ns/ical/"
+    private const val NS_NC = "http://nextcloud.com/ns"
 
     private fun documentElement(xml: String): Element {
         val factory = DocumentBuilderFactory.newInstance().apply {
@@ -56,6 +57,9 @@ object MultiStatusParser {
             // Skip the calendar-home itself.
             if (href.trimEnd('/') == ownHref.trimEnd('/')) continue
             val prop = response.okProp() ?: continue
+
+            // Nextcloud keeps deleted calendars in the home (trash) and flags them.
+            if (!prop.firstText(NS_NC, "deleted-at").isNullOrBlank()) continue
 
             val resourceType = prop.firstChild(NS_DAV, "resourcetype")
             val isCalendar = resourceType?.childElements(NS_CALDAV, "calendar")?.isNotEmpty() == true

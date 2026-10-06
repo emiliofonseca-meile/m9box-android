@@ -92,7 +92,7 @@ class CalDavClient(
         return MultiStatusParser.parseResources(resp)
     }
 
-    /** MKCALENDAR a task-only collection; returns its href. */
+    /** MKCALENDAR a task-only collection; returns its server path (same shape as discovery hrefs). */
     fun makeTaskList(slug: String, displayName: String): String {
         val href = calendarHome + slug + "/"
         val name = displayName.replace("&", "&amp;").replace("<", "&lt;")
@@ -105,7 +105,7 @@ class CalDavClient(
 </c:mkcalendar>""".toRequestBody(xml)
         val (code, _) = execString(baseRequest(href).method("MKCALENDAR", body).build())
         if (code != 201) throw CalDavException(code, "makeTaskList")
-        return href
+        return resolve(href).encodedPath
     }
 
     fun syncCollection(calendarHref: String, syncToken: String?): MultiStatusParser.SyncResult {
@@ -200,7 +200,8 @@ class CalDavClient(
 
         private val PROP_CALENDARS = """<?xml version="1.0" encoding="utf-8" ?>
 <d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"
-            xmlns:cs="http://calendarserver.org/ns/" xmlns:ic="http://apple.com/ns/ical/">
+            xmlns:cs="http://calendarserver.org/ns/" xmlns:ic="http://apple.com/ns/ical/"
+            xmlns:nc="http://nextcloud.com/ns">
   <d:prop>
     <d:resourcetype/>
     <d:displayname/>
@@ -209,6 +210,7 @@ class CalDavClient(
     <d:sync-token/>
     <ic:calendar-color/>
     <c:supported-calendar-component-set/>
+    <nc:deleted-at/>
   </d:prop>
 </d:propfind>"""
     }
