@@ -151,6 +151,11 @@
             android:label="@string/bottom_navigation_menu_calendar_label"/>
         -->
 
+        <activity
+            android:name="com.nextcloud.meile.tasks.TasksActivity"
+            android:exported="false"
+            android:label="@string/tasks_title" />
+
         <activity-alias
             android:name="com.nextcloud.ui.composeActivity.ComposeProcessTextAlias"
             android:targetActivity="com.nextcloud.ui.composeActivity.ComposeActivity"

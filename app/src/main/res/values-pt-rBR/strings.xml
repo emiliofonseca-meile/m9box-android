@@ -1328,4 +1328,25 @@
         <item quantity="many">%1$d downloads restantes</item>
         <item quantity="other">%1$d downloads restantes</item>
     </plurals>
+
+    <!-- Tasks -->
+    <string name="tasks_title">Tarefas</string>
+    <string name="tasks_empty">Nenhuma tarefa em aberto</string>
+    <string name="tasks_no_list">Você ainda não tem uma lista de tarefas.</string>
+    <string name="tasks_create_list">Criar lista de tarefas</string>
+    <string name="tasks_default_list_name">Tarefas</string>
+    <string name="tasks_new">Nova tarefa</string>
+    <string name="tasks_edit">Editar tarefa</string>
+    <string name="tasks_field_title">Título</string>
+    <string name="tasks_field_notes">Notas</string>
+    <string name="tasks_field_list">Lista</string>
+    <string name="tasks_set_due">Definir data de entrega</string>
+    <string name="tasks_due_prefix">Entrega: %1$s</string>
+    <string name="tasks_clear_due">Remover data</string>
+    <string name="tasks_save">Salvar</string>
+    <string name="tasks_cancel">Cancelar</string>
+    <string name="tasks_all_lists">Todas</string>
+    <string name="tasks_completed_section">Concluídas (%1$d)</string>
+    <string name="tasks_error_conflict">Esta tarefa foi alterada em outro lugar. A lista foi atualizada, tente novamente.</string>
+    <string name="tasks_error_generic">Não foi possível concluir a operação: %1$s</string>
 </resources>
