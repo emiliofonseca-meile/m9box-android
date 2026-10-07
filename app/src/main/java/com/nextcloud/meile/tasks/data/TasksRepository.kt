@@ -5,15 +5,17 @@
 package com.nextcloud.meile.tasks.data
 
 import com.nextcloud.meile.calendar.caldav.CalDavClient
+import com.nextcloud.meile.calendar.caldav.CalDavException
 import com.nextcloud.meile.calendar.model.CalendarCollection
+import com.nextcloud.meile.calendar.model.RemoteResource
 import com.nextcloud.meile.tasks.ical.TaskMapper
 import com.nextcloud.meile.tasks.model.TaskDraft
 import com.nextcloud.meile.tasks.model.TaskItem
 import java.util.UUID
 
 /**
- * Writes re-fetch the resource and PUT with If-Match (a 412 surfaces as
- * CalDavException(412) so the UI can refresh); creates use If-None-Match: *.
+ * Writes re-fetch the resource as merge base and PUT with If-Match of the
+ * ETag the user saw (a 412 surfaces as CalDavException(412) so the UI can refresh); creates use If-None-Match: *.
  */
 class TasksRepository(
     private val client: CalDavClient,
@@ -35,14 +37,25 @@ class TasksRepository(
     }
 
     fun update(task: TaskItem, draft: TaskDraft) {
-        val existing = client.getResource(task.resourceHref)
+        val existing = fetchUnchanged(task)
         val ics = TaskMapper.applyEdit(existing.ics, draft, clock())
-        client.putResource(task.resourceHref, ics, ifMatch = existing.etag, isNew = false)
+        client.putResource(task.resourceHref, ics, ifMatch = task.etag ?: existing.etag, isNew = false)
     }
 
     fun setCompleted(task: TaskItem, done: Boolean) {
-        val existing = client.getResource(task.resourceHref)
+        val existing = fetchUnchanged(task)
         val ics = TaskMapper.setCompleted(existing.ics, done, clock())
-        client.putResource(task.resourceHref, ics, ifMatch = existing.etag, isNew = false)
+        client.putResource(task.resourceHref, ics, ifMatch = task.etag ?: existing.etag, isNew = false)
+    }
+
+    /**
+     * The fresh copy is only the merge base. The guard is the ETag the user was
+     * looking at: if the server moved on, refuse before building anything from
+     * a draft that was made against the old version.
+     */
+    private fun fetchUnchanged(task: TaskItem): RemoteResource {
+        val existing = client.getResource(task.resourceHref)
+        if (task.etag != null && existing.etag != task.etag) throw CalDavException(412, "stale task")
+        return existing
     }
 }
