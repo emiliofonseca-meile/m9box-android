@@ -22,6 +22,8 @@ import com.nextcloud.client.media.BackgroundPlayerService;
 import com.nextcloud.client.media.PlayerService;
 import com.nextcloud.client.migrations.Migrations;
 import com.nextcloud.client.onboarding.FirstRunActivity;
+import com.nextcloud.meile.calendar.CalendarActivity;
+import com.nextcloud.meile.tasks.TasksActivity;
 import com.nextcloud.client.onboarding.WhatsNewActivity;
 import com.nextcloud.client.widget.DashboardWidgetConfigurationActivity;
 import com.nextcloud.client.widget.DashboardWidgetProvider;
@@ -141,6 +143,12 @@ import dagger.android.ContributesAndroidInjector;
  */
 @Module
 abstract class ComponentsModule {
+    @ContributesAndroidInjector
+    abstract CalendarActivity calendarActivity();
+
+    @ContributesAndroidInjector
+    abstract TasksActivity tasksActivity();
+
     @ContributesAndroidInjector
     abstract TrashbinFragment trashbinFragment();
 
