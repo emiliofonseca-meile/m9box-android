@@ -189,7 +189,7 @@ android {
                 dimension = "default"
                 // Own Google Play counter, independent of the upstream versionCode scheme above
                 // (34.0.1 -> 340000190). Bump by one on every upload; Play rejects a reused code.
-                versionCode = 2
+                versionCode = 3
             }
         }
     }
