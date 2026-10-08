@@ -17,7 +17,7 @@
     <string name="file_provider_authority">network.m9.box.files</string>
     <string name="image_cache_provider_authority">network.m9.box.imageCache.provider</string>
 
-    <!-- User agent -->
+    <!-- User agent. The version is BuildConfig.UPSTREAM_VERSION, not versionName (see build.gradle.kts) -->
     <string name="nextcloud_user_agent">Mozilla/5.0 (Android) M9Box-android/%1$s%2$s</string>
     <string name="office_user_agent">Mozilla/5.0 (Android %1$s) Mobile M9Box-android/%2$s</string>
 
