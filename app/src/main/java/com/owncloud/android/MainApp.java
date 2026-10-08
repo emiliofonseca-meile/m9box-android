@@ -26,7 +26,6 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.os.Bundle;
@@ -828,19 +827,9 @@ public class MainApp extends Application implements HasAndroidInjector, NetworkC
     private static String getUserAgent(@StringRes int agent) {
         String appString = string(agent);
         String brandedName = string(R.string.name_for_branded_user_agent);
-        String packageName = getAppContext().getPackageName();
-        String version = "";
 
-        try {
-            PackageInfo pInfo = getAppContext().getPackageManager().getPackageInfo(packageName, 0);
-            if (pInfo != null) {
-                version = pInfo.versionName;
-            }
-        } catch (PackageManager.NameNotFoundException e) {
-            Log_OC.e(TAG, "Trying to get packageName", e.getCause());
-        }
-
-        return String.format(appString, version, brandedName);
+        // The upstream version, not the versionName shown to users: servers read the client version here.
+        return String.format(appString, BuildConfig.UPSTREAM_VERSION, brandedName);
     }
 
     private static void updateToAutoUpload(Context context) {

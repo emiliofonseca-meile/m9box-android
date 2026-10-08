@@ -15,8 +15,8 @@ import androidx.core.net.toUri
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import com.nextcloud.android.common.ui.util.PlatformThemeUtil
-import com.nextcloud.client.appinfo.AppInfo
 import com.nextcloud.client.device.DeviceInfo
+import com.owncloud.android.BuildConfig
 import com.owncloud.android.R
 import com.owncloud.android.datamodel.OCFile
 import com.owncloud.android.ui.asynctasks.TextEditorLoadUrlTask
@@ -24,9 +24,6 @@ import com.owncloud.android.utils.DisplayUtils
 import javax.inject.Inject
 
 class TextEditorWebView : EditorWebView() {
-    @Inject
-    lateinit var appInfo: AppInfo
-
     @Inject
     lateinit var deviceInfo: DeviceInfo
 
@@ -89,6 +86,8 @@ class TextEditorWebView : EditorWebView() {
 
     private fun generateOfficeUserAgent(): String {
         val userAgent = applicationContext.resources.getString(R.string.office_user_agent)
-        return String.format(userAgent, deviceInfo.androidVersion, appInfo.getAppVersion(this))
+
+        // upstream version (what the server reads from the User-Agent), not the versionName shown to users
+        return String.format(userAgent, deviceInfo.androidVersion, BuildConfig.UPSTREAM_VERSION)
     }
 }

@@ -129,11 +129,17 @@ android {
         else "com.nextcloud.client.TestRunner"
 
         versionCode = versionMajor * 10000000 + versionMinor * 10000 + versionPatch * 100 + versionBuild
-        versionName = when {
+        val upstreamVersionName = when {
             versionBuild > 89 -> "${versionMajor}.${versionMinor}.${versionPatch}"
             versionBuild > 50 -> "${versionMajor}.${versionMinor}.${versionPatch} RC" + (versionBuild - 50)
             else -> "${versionMajor}.${versionMinor}.${versionPatch} Alpha" + (versionBuild + 1)
         }
+        versionName = upstreamVersionName
+
+        // Version of the upstream client this fork is based on. It is what the server sees in the
+        // User-Agent (servers gate features on the client version), so it must follow upstream even
+        // when a flavor shows its own versionName to users.
+        buildConfigField("String", "UPSTREAM_VERSION", "\"$upstreamVersionName\"")
 
         // adapt structure from Eclipse to Gradle/Android Studio expectations;
         // see http://tools.android.com/tech-docs/new-build-system/user-guide#TOC-Configuring-the-Structure
@@ -187,9 +193,13 @@ android {
             register("meile") {
                 applicationId = "com.m9network.m9box"
                 dimension = "default"
-                // Own Google Play counter, independent of the upstream versionCode scheme above
-                // (34.0.1 -> 340000190). Bump by one on every upload; Play rejects a reused code.
-                versionCode = 3
+                // Own store numbering, independent of the upstream scheme above (34.0.1 / 340000190).
+                // On every store upload:
+                //   versionName: 1.0.N, N + 1 (1.0.0, 1.0.1, ...). Only the owner moves it to 1.1.0.
+                //   versionCode: + 1; Play rejects a reused code.
+                // The User-Agent still carries BuildConfig.UPSTREAM_VERSION, not versionName.
+                versionName = "1.0.0"
+                versionCode = 4
             }
         }
     }
