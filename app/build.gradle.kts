@@ -188,8 +188,8 @@ android {
                 //   versionName: 1.0.N, N + 1 (1.0.0, 1.0.1, ...). Only the owner moves it to 1.1.0.
                 //   versionCode: + 1; Play rejects a reused code.
                 // The User-Agent still carries BuildConfig.UPSTREAM_VERSION, not versionName.
-                versionName = "1.0.0"
-                versionCode = 4
+                versionName = "1.0.1"
+                versionCode = 5
             }
         }
     }
