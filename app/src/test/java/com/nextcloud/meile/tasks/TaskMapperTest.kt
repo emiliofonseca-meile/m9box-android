@@ -217,4 +217,50 @@ class TaskMapperTest {
         assertEquals("abc", r.etag)
         assertEquals("Pagar boleto", TaskMapper.parse(list, r)!!.summary)
     }
+
+    private fun withRelated(line: String?) = """
+        BEGIN:VCALENDAR
+        VERSION:2.0
+        PRODID:-//x//EN
+        BEGIN:VTODO
+        UID:c1
+        DTSTAMP:20260101T000000Z
+        SUMMARY:Filha
+        ${line ?: "X-NONE:1"}
+        END:VTODO
+        END:VCALENDAR
+    """
+
+    private fun parentOf(line: String?) = TaskMapper.parse(list, res(withRelated(line)))!!.parentUid
+
+    @Test
+    fun `parentUid from RELATED-TO`() {
+        assertNull(parentOf(null))
+        assertEquals("p1", parentOf("RELATED-TO:p1"))
+        assertEquals("p1", parentOf("RELATED-TO;RELTYPE=PARENT:p1"))
+        assertEquals("p1", parentOf("RELATED-TO;RELTYPE=parent:p1"))
+        assertEquals("p1", parentOf("RELATED-TO;X-FOO=bar;RELTYPE=PARENT:p1"))
+        assertEquals("p1", parentOf("RELATED-TO: p1 "))
+        assertNull(parentOf("RELATED-TO;RELTYPE=CHILD:p1"))
+        assertNull(parentOf("RELATED-TO;RELTYPE=SIBLING:p1"))
+        assertNull(parentOf("RELATED-TO:"))
+    }
+
+    @Test
+    fun `first usable RELATED-TO wins, CHILD is skipped`() {
+        val ics = withRelated("RELATED-TO;RELTYPE=CHILD:kid\nRELATED-TO:p2\nRELATED-TO:p3".replace("\n", "\n        "))
+        assertEquals("p2", TaskMapper.parse(list, res(ics))!!.parentUid)
+    }
+
+    @Test
+    fun `setCompleted and applyEdit keep RELATED-TO`() {
+        val ics = res(foreign).ics
+        val done = TaskMapper.setCompleted(ics, true, now)
+        assertTrue(done, done.contains("RELATED-TO;RELTYPE=PARENT:parent-uid"))
+        assertEquals("parent-uid", TaskMapper.parse(list, RemoteResource("/a.ics", null, done))!!.parentUid)
+        val reopened = TaskMapper.setCompleted(done, false, now)
+        assertTrue(reopened, reopened.contains("RELATED-TO;RELTYPE=PARENT:parent-uid"))
+        val edited = TaskMapper.applyEdit(ics, TaskDraft(list, "/a.ics", "Novo"), now)
+        assertEquals("parent-uid", TaskMapper.parse(list, RemoteResource("/a.ics", null, edited))!!.parentUid)
+    }
 }

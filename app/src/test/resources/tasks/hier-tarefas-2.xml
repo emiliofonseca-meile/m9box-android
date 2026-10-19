@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns" xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/" xmlns:oc="http://owncloud.org/ns" xmlns:nc="http://nextcloud.org/ns"><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-tarefas-2/6B71DC9514A9CA4A104E71FD3E2DA5F6-CAE7A2D70EEBFE02.ics</d:href><d:propstat><d:prop><d:getetag>&quot;594f18523ebf0e65caf6ae5ca9251b67&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Roundcube 1.7.3//Sabre VObject 4.5.9//EN
+CALSCALE:GREGORIAN
+BEGIN:VTODO
+UID:6B71DC9514A9CA4A104E71FD3E2DA5F6-CAE7A2D70EEBFE02
+DTSTAMP:20261019T151137Z
+CREATED:20261019T151051Z
+LAST-MODIFIED:20261019T151137Z
+SUMMARY:nova sub RC
+ORGANIZER:mailto:alice@example.test
+RELATED-TO;RELTYPE=PARENT:195b4260-5853-42ff-8536-0a71a5f84323
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-tarefas-2/93F8AA6F34A2411D9C9DC5769C871C92.ics</d:href><d:propstat><d:prop><d:getetag>&quot;6fbe4392a6a703b5fa812f23d39ed8ed&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Roundcube 1.7.3//Sabre VObject 4.5.9//EN
+CALSCALE:GREGORIAN
+BEGIN:VTODO
+UID:48c012f2-b8b9-40e3-a571-0b7befbdbd36
+DTSTAMP:20261019T151137Z
+CREATED:20261019T120000Z
+LAST-MODIFIED:20261019T151137Z
+SUMMARY:tarefa 2
+STATUS:COMPLETED
+PERCENT-COMPLETE:100
+COMPLETED:20261019T151137Z
+RELATED-TO;RELTYPE=PARENT:195b4260-5853-42ff-8536-0a71a5f84323
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-tarefas-2/B8BBFAA2B07D414995B61623D6C92D81.ics</d:href><d:propstat><d:prop><d:getetag>&quot;b75a0bc8d8db74df14c020e13a104c27&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Nextcloud Tasks v0.18.1
+BEGIN:VTODO
+UID:c395f280-7ebf-40b2-92e1-7f9e4d726bc0
+CREATED:20261019T120000Z
+DTSTAMP:20261019T120000Z
+SUMMARY:tarefa 4
+RELATED-TO:48c012f2-b8b9-40e3-a571-0b7befbdbd36
+STATUS:NEEDS-ACTION
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-tarefas-2/BC9EAE480DF841088678633252F01801.ics</d:href><d:propstat><d:prop><d:getetag>&quot;b6fc534d91b66ffba270935f5f6f27ff&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Roundcube 1.7.3//Sabre VObject 4.5.9//EN
+CALSCALE:GREGORIAN
+BEGIN:VTODO
+UID:35fc03ce-b3f6-42d2-a094-307d50aafdef
+DTSTAMP:20261019T151137Z
+CREATED:20261019T120000Z
+LAST-MODIFIED:20261019T151137Z
+SUMMARY:tarefa 1
+STATUS:NEEDS-ACTION
+RELATED-TO;RELTYPE=PARENT:195b4260-5853-42ff-8536-0a71a5f84323
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-tarefas-2/D1134CEC0DDB401D8EF5CD6F4BE859F1.ics</d:href><d:propstat><d:prop><d:getetag>&quot;e98149f568a6e1f3203b46215be68ba1&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Nextcloud Tasks v0.18.1
+BEGIN:VTODO
+UID:195b4260-5853-42ff-8536-0a71a5f84323
+CREATED:20261019T120000Z
+DTSTAMP:20261019T120000Z
+SUMMARY:tarefas (hier-tarefas-2)
+STATUS:NEEDS-ACTION
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>

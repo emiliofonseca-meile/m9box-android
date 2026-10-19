@@ -8,7 +8,11 @@ import com.nextcloud.meile.calendar.caldav.CalDavException
 import com.nextcloud.meile.calendar.model.CalendarCollection
 import com.nextcloud.meile.tasks.data.TasksRepository
 import com.nextcloud.meile.tasks.model.TaskDraft
+import com.nextcloud.meile.tasks.model.DONE_ORDER
+import com.nextcloud.meile.tasks.model.OPEN_ORDER
 import com.nextcloud.meile.tasks.model.TaskItem
+import com.nextcloud.meile.tasks.model.TaskNode
+import com.nextcloud.meile.tasks.model.taskTree
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,10 +43,11 @@ class TasksViewModel(
         val showCompleted: Boolean = false
     ) {
         val visible: List<TaskItem> get() = tasks.filter { selectedList == null || it.listHref == selectedList }
-        val open: List<TaskItem> get() = visible.filter { !it.completed }
-            .sortedWith(compareBy({ it.due ?: Long.MAX_VALUE }, { it.summary.lowercase() }))
-        val done: List<TaskItem> get() = visible.filter { it.completed }
-            .sortedByDescending { it.completedAt ?: 0L }
+        val open: List<TaskItem> get() = visible.filter { !it.completed }.sortedWith(OPEN_ORDER)
+        val done: List<TaskItem> get() = visible.filter { it.completed }.sortedWith(DONE_ORDER)
+        /** [open] / [done] as subtask trees (depth-first, with indent level). */
+        val openTree: List<TaskNode> get() = taskTree(visible.filter { !it.completed }, OPEN_ORDER)
+        val doneTree: List<TaskNode> get() = taskTree(visible.filter { it.completed }, DONE_ORDER)
     }
 
     private val _state = MutableStateFlow(UiState())

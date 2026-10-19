@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns" xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/" xmlns:oc="http://owncloud.org/ns" xmlns:nc="http://nextcloud.org/ns"><d:response><d:href>/remote.php/dav/calendars/alice@example.test/app-generated--deck--board-2/card-6.ics</d:href><d:propstat><d:prop><d:getetag>&quot;8695ee5b87013e5ffddbe8afb5ec4178&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Sabre//Sabre VObject 4.5.6//EN
+CALSCALE:GREGORIAN
+BEGIN:VTODO
+DTSTAMP:20261019T154518Z
+UID:deck-card-6
+RELATED-TO:deck-stack-5
+STATUS:NEEDS-ACTION
+CATEGORIES:
+SUMMARY:Cartão 1 de Aprovação
+DESCRIPTION:
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/app-generated--deck--board-2/card-7.ics</d:href><d:propstat><d:prop><d:getetag>&quot;68201083c15b9f8a70889e2628925b89&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Sabre//Sabre VObject 4.5.6//EN
+CALSCALE:GREGORIAN
+BEGIN:VTODO
+DTSTAMP:20261019T154518Z
+UID:deck-card-7
+RELATED-TO:deck-stack-5
+STATUS:NEEDS-ACTION
+CATEGORIES:
+SUMMARY:Cartão 2 de Aprovação
+DESCRIPTION:
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/app-generated--deck--board-2/card-8.ics</d:href><d:propstat><d:prop><d:getetag>&quot;7aafcb7ffc383806f781bdb36fce176d&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Sabre//Sabre VObject 4.5.6//EN
+CALSCALE:GREGORIAN
+BEGIN:VTODO
+DTSTAMP:20261019T154518Z
+UID:deck-card-8
+RELATED-TO:deck-stack-6
+STATUS:NEEDS-ACTION
+CATEGORIES:
+SUMMARY:Cartão 1 de Concluído
+DESCRIPTION:
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/app-generated--deck--board-2/card-9.ics</d:href><d:propstat><d:prop><d:getetag>&quot;8b11a6265f4df1c8d659ef094074eaf6&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Sabre//Sabre VObject 4.5.6//EN
+CALSCALE:GREGORIAN
+BEGIN:VTODO
+DTSTAMP:20261019T154518Z
+UID:deck-card-9
+RELATED-TO:deck-stack-6
+STATUS:NEEDS-ACTION
+CATEGORIES:
+SUMMARY:Cartão 2 de Concluído
+DESCRIPTION:
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/app-generated--deck--board-2/stack-5.ics</d:href><d:propstat><d:prop><d:getetag>&quot;68201083c15b9f8a70889e2628925b89&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Sabre//Sabre VObject 4.5.6//EN
+CALSCALE:GREGORIAN
+BEGIN:VTODO
+DTSTAMP:20261019T154518Z
+UID:deck-stack-5
+SUMMARY:List : Aprovação
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/app-generated--deck--board-2/stack-6.ics</d:href><d:propstat><d:prop><d:getetag>&quot;8b11a6265f4df1c8d659ef094074eaf6&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Sabre//Sabre VObject 4.5.6//EN
+CALSCALE:GREGORIAN
+BEGIN:VTODO
+DTSTAMP:20261019T154518Z
+UID:deck-stack-6
+SUMMARY:List : Concluído
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>

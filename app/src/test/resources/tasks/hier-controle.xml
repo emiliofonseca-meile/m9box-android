@@ -1,0 +1,120 @@
+<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns" xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/" xmlns:oc="http://owncloud.org/ns" xmlns:nc="http://nextcloud.org/ns"><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-controle/0EBD8C9B314E4C00AAA758541F4CBD2A.ics</d:href><d:propstat><d:prop><d:getetag>&quot;2d303c769611d6234e9ed6e6a64fc422&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Nextcloud Tasks v0.18.1
+BEGIN:VTODO
+UID:a27f990f-92d1-41d4-982c-59d124a12cc9
+CREATED:20261019T120000Z
+DTSTAMP:20261019T120000Z
+SUMMARY:tarefa 1
+RELATED-TO:9270df61-f581-464c-92d9-a55434b12e22
+STATUS:NEEDS-ACTION
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-controle/285F9885D11D450D8EE3BE47E70D56AB.ics</d:href><d:propstat><d:prop><d:getetag>&quot;4796697861704df3d0c9d1c77d155708&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Nextcloud Tasks v0.18.1
+BEGIN:VTODO
+UID:fdae60e2-da10-4718-85ea-66b9172f4a08
+CREATED:20261019T120000Z
+DTSTAMP:20261019T120000Z
+SUMMARY:tarefa 2
+RELATED-TO:f0b6e4e1-e7ae-42b1-bfb3-d0a2932dd00c
+STATUS:NEEDS-ACTION
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-controle/35247641-c52f-458d-9199-371e092222f7.ics</d:href><d:propstat><d:prop><d:getetag>&quot;6ad0e570cb933ea14dfb80e5d689561f&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Nextcloud Tasks v0.18.1
+BEGIN:VTODO
+UID:35247641-c52f-458d-9199-371e092222f7
+CREATED:20261019T120000Z
+DTSTAMP:20261019T120000Z
+SUMMARY:tarefa 4
+RELATED-TO:e7330faf-a93c-4c67-bbc8-0de23d3ab343
+STATUS:NEEDS-ACTION
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-controle/4BAA7DA108F042EB9B876564FDDF87ED.ics</d:href><d:propstat><d:prop><d:getetag>&quot;212635fa06c080fb3448303d178742a3&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Nextcloud Tasks v0.18.1
+BEGIN:VTODO
+UID:9270df61-f581-464c-92d9-a55434b12e22
+CREATED:20261019T120000Z
+DTSTAMP:20261019T120000Z
+SUMMARY:tarefas (hier-tarefas-5)
+STATUS:NEEDS-ACTION
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-controle/81D037DB9542435C873DD36283162A31.ics</d:href><d:propstat><d:prop><d:getetag>&quot;3abeba0a54360fe6a2ee4517edc76eb3&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Nextcloud Tasks v0.18.1
+BEGIN:VTODO
+UID:f0b6e4e1-e7ae-42b1-bfb3-d0a2932dd00c
+CREATED:20261019T120000Z
+DTSTAMP:20261019T120000Z
+SUMMARY:tarefa 3
+RELATED-TO:9270df61-f581-464c-92d9-a55434b12e22
+STATUS:NEEDS-ACTION
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-controle/A372850CCCE4451E923C2EF8309851A5.ics</d:href><d:propstat><d:prop><d:getetag>&quot;e88da51de6e917bcbb7cea4132187ea6&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Nextcloud Tasks v0.18.1
+BEGIN:VTODO
+UID:66981a14-d1e3-4ad2-a840-b3c55a6ce7f6
+CREATED:20261019T120000Z
+DTSTAMP:20261019T120000Z
+SUMMARY:tarefa 4
+RELATED-TO:fdae60e2-da10-4718-85ea-66b9172f4a08
+STATUS:NEEDS-ACTION
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-controle/b5981f9a-9504-411f-8cda-2d499a960d1f.ics</d:href><d:propstat><d:prop><d:getetag>&quot;b1cdf5397ce0358f27aaaf37336fb38d&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Nextcloud Tasks v0.18.1
+BEGIN:VTODO
+UID:b5981f9a-9504-411f-8cda-2d499a960d1f
+CREATED:20261019T120000Z
+DTSTAMP:20261019T120000Z
+SUMMARY:tarefas (hier-controle)
+STATUS:NEEDS-ACTION
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-controle/c34b0d26-622c-4e9a-a96c-7d0988596a24.ics</d:href><d:propstat><d:prop><d:getetag>&quot;c72b683fbe139e51cbd6d18823586598&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Nextcloud Tasks v0.18.1
+BEGIN:VTODO
+UID:c34b0d26-622c-4e9a-a96c-7d0988596a24
+CREATED:20261019T120000Z
+DTSTAMP:20261019T120000Z
+SUMMARY:tarefa 3
+RELATED-TO:b5981f9a-9504-411f-8cda-2d499a960d1f
+STATUS:NEEDS-ACTION
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-controle/e0eb0875-a4d1-48b9-82ca-ba693dcfa6e5.ics</d:href><d:propstat><d:prop><d:getetag>&quot;2ddf5742eebd7d8ba7b4aa1fe564f98a&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Nextcloud Tasks v0.18.1
+BEGIN:VTODO
+UID:e0eb0875-a4d1-48b9-82ca-ba693dcfa6e5
+CREATED:20261019T120000Z
+DTSTAMP:20261019T120000Z
+SUMMARY:tarefa 1
+RELATED-TO:b5981f9a-9504-411f-8cda-2d499a960d1f
+STATUS:NEEDS-ACTION
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/dav/calendars/alice@example.test/hier-controle/e7330faf-a93c-4c67-bbc8-0de23d3ab343.ics</d:href><d:propstat><d:prop><d:getetag>&quot;6c4b0ccf86cfb4b748f7f44a47d3e4bc&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Nextcloud Tasks v0.18.1
+BEGIN:VTODO
+UID:e7330faf-a93c-4c67-bbc8-0de23d3ab343
+CREATED:20261019T120000Z
+DTSTAMP:20261019T120000Z
+SUMMARY:tarefa 2
+RELATED-TO:c34b0d26-622c-4e9a-a96c-7d0988596a24
+STATUS:NEEDS-ACTION
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>
