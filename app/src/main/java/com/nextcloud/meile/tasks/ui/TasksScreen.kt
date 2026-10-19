@@ -114,8 +114,8 @@ fun TasksScreen(
                     )
                 }
                 LazyColumn(Modifier.fillMaxWidth()) {
-                    items(state.open, key = { it.resourceHref }) { task ->
-                        TaskRow(task, onToggle = { viewModel.setCompleted(task, it) }, onOpen = { onOpen(task) })
+                    items(state.openTree, key = { it.task.resourceHref }) { (task, depth) ->
+                        TaskRow(task, depth, onToggle = { viewModel.setCompleted(task, it) }, onOpen = { onOpen(task) })
                     }
                     if (state.done.isNotEmpty()) {
                         item {
@@ -125,8 +125,8 @@ fun TasksScreen(
                             ) { Text(stringResource(R.string.tasks_completed_section, state.done.size)) }
                         }
                         if (state.showCompleted) {
-                            items(state.done, key = { it.resourceHref }) { task ->
-                                TaskRow(task, onToggle = { viewModel.setCompleted(task, it) }, onOpen = { onOpen(task) })
+                            items(state.doneTree, key = { it.task.resourceHref }) { (task, depth) ->
+                                TaskRow(task, depth, onToggle = { viewModel.setCompleted(task, it) }, onOpen = { onOpen(task) })
                             }
                         }
                     }
@@ -136,10 +136,14 @@ fun TasksScreen(
     }
 }
 
+/** Deeper subtasks keep the last indent so the text is not squeezed. */
+private const val MAX_INDENT = 5
+
 @Composable
-private fun TaskRow(task: TaskItem, onToggle: (Boolean) -> Unit, onOpen: () -> Unit) {
+private fun TaskRow(task: TaskItem, depth: Int, onToggle: (Boolean) -> Unit, onOpen: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 8.dp, vertical = 4.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onOpen)
+            .padding(start = 8.dp + 24.dp * depth.coerceAtMost(MAX_INDENT), end = 8.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(checked = task.completed, onCheckedChange = onToggle)

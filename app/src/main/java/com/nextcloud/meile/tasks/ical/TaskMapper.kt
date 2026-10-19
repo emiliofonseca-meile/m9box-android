@@ -10,6 +10,7 @@ import com.nextcloud.meile.tasks.model.TaskDraft
 import com.nextcloud.meile.tasks.model.TaskItem
 import net.fortuna.ical4j.model.Calendar
 import net.fortuna.ical4j.model.DateTime
+import net.fortuna.ical4j.model.Parameter
 import net.fortuna.ical4j.model.Property
 import net.fortuna.ical4j.model.component.VToDo
 import net.fortuna.ical4j.model.property.CalScale
@@ -51,9 +52,16 @@ object TaskMapper {
             due = due?.time,
             dueAllDay = due != null && due !is DateTime,
             completed = todo.status == Status.VTODO_COMPLETED || completedAt != null,
-            completedAt = completedAt
+            completedAt = completedAt,
+            parentUid = parentUid(todo)
         )
     }
+
+    /** Nextcloud Tasks/Deck link a subtask with RELATED-TO:<parent UID>; RELTYPE CHILD/SIBLING point elsewhere. */
+    private fun parentUid(todo: VToDo): String? =
+        todo.properties.filter { it.name.equals(Property.RELATED_TO, ignoreCase = true) }
+            .firstOrNull { p -> p.getParameter<Parameter>(Parameter.RELTYPE)?.value.let { it == null || it.equals("PARENT", ignoreCase = true) } }
+            ?.value?.trim()?.takeIf { it.isNotEmpty() }
 
     fun buildNew(draft: TaskDraft, uid: String, nowMs: Long): String {
         val cal = Calendar()

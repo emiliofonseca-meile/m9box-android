@@ -18,7 +18,9 @@ data class TaskItem(
     val due: Long?,
     val dueAllDay: Boolean,
     val completed: Boolean,
-    val completedAt: Long?
+    val completedAt: Long?,
+    /** UID of the parent task (first RELATED-TO that is PARENT or has no RELTYPE), null for a root. */
+    val parentUid: String? = null
 )
 
 /** Editor input. [resourceHref] null means a brand-new task. */
