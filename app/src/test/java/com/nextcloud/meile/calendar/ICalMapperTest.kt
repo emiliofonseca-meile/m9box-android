@@ -5,20 +5,41 @@
 package com.nextcloud.meile.calendar
 
 import com.nextcloud.meile.calendar.ical.ICalMapper
+import com.nextcloud.meile.calendar.ical.events
+import com.nextcloud.meile.calendar.ical.providerZoneId
+import com.nextcloud.meile.calendar.ical.temporal
+import com.nextcloud.meile.calendar.ical.toEpochMs
 import com.nextcloud.meile.calendar.model.CalendarCollection
 import com.nextcloud.meile.calendar.model.EventDraft
 import com.nextcloud.meile.calendar.model.RecurrenceScope
 import com.nextcloud.meile.calendar.model.Reminder
 import com.nextcloud.meile.calendar.model.RemoteResource
+import net.fortuna.ical4j.model.Property
+import net.fortuna.ical4j.model.TimeZoneRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.BeforeClass
 import org.junit.Test
 import java.time.Instant
+import java.time.ZoneId
 import java.util.Calendar
 import java.util.TimeZone
 
 class ICalMapperTest {
+
+    companion object {
+        // Na JVM o ical4j registra o DefaultZoneRulesProvider (ServiceLoader) e troca cada TZID
+        // por regras que ele monta dos VTIMEZONE embutidos, erradas para zonas que largaram o
+        // horário de verão (São Paulo -02:00 em janeiro). No Android esse provedor não carrega e
+        // o TZID vira o fuso da plataforma. Esvaziar o mapa deixa o teste igual ao aparelho.
+        @JvmStatic
+        @BeforeClass
+        fun fusosComoNoAndroid() {
+            ZoneId.getAvailableZoneIds()
+            TimeZoneRegistry.ZONE_IDS.clear()
+        }
+    }
 
     private val collection = CalendarCollection(
         href = "/remote.php/dav/calendars/user/personal/",
@@ -139,6 +160,61 @@ class ICalMapperTest {
         val events = expand(ics)
         assertTrue(events.isNotEmpty())
         assertTrue(events.all { it.summary == "Meeting" })
+    }
+
+    // Brasil sem horário de verão desde 2019: 10:00 em São Paulo é 13:00Z o ano todo.
+    private fun draftSp(startIso: String, endIso: String) = EventDraft(
+        uid = null,
+        calendarHref = collection.href,
+        resourceHref = null,
+        etag = null,
+        summary = "Reunião",
+        location = null,
+        description = null,
+        start = ms(startIso),
+        end = ms(endIso),
+        allDay = false,
+        timeZoneId = "America/Sao_Paulo",
+        rrule = null,
+        reminders = emptyList(),
+        attendees = emptyList()
+    )
+
+    @Test
+    fun `build writes the local wall time of the event zone, summer included`() {
+        for ((startIso, local) in listOf(
+            "2026-01-10T13:00:00Z" to "20260110T100000",
+            "2026-07-10T13:00:00Z" to "20260710T100000"
+        )) {
+            val ics = ICalMapper.buildIcs(draftSp(startIso, startIso.replace("T13", "T14")))
+            assertTrue("DTSTART $local em:\n$ics", ics.contains("DTSTART;TZID=America/Sao_Paulo:$local"))
+            val back = ICalMapper.parse(ics).events().single().temporal(Property.DTSTART)!!.toEpochMs()
+            assertEquals(ms(startIso), back)
+        }
+    }
+
+    private fun spEvent(withVTimeZone: Boolean) = """
+        BEGIN:VCALENDAR
+        VERSION:2.0
+        PRODID:-//Nextcloud calendar//EN
+        ${if (withVTimeZone) "BEGIN:VTIMEZONE\nTZID:America/Sao_Paulo\nBEGIN:STANDARD\nTZOFFSETFROM:-0300\nTZOFFSETTO:-0300\nTZNAME:-03\nDTSTART:19700101T000000\nEND:STANDARD\nEND:VTIMEZONE" else ""}
+        BEGIN:VEVENT
+        UID:sp-1
+        DTSTAMP:20260101T000000Z
+        DTSTART;TZID=America/Sao_Paulo:20260110T100000
+        DTEND;TZID=America/Sao_Paulo:20260110T110000
+        SUMMARY:SP
+        END:VEVENT
+        END:VCALENDAR
+    """.trimIndent().lines().filter { it.isNotBlank() }.joinToString("\r\n") { it.trim() }
+
+    @Test
+    fun `server event in Sao Paulo keeps the instant and an IANA zone id`() {
+        for (withVTimeZone in listOf(true, false)) {
+            val start = ICalMapper.parse(spEvent(withVTimeZone)).events().single().temporal(Property.DTSTART)!!
+            assertEquals("instante (VTIMEZONE=$withVTimeZone)", ms("2026-01-10T13:00:00Z"), start.toEpochMs())
+            assertEquals("zona (VTIMEZONE=$withVTimeZone)", "America/Sao_Paulo", start.providerZoneId())
+        }
     }
 
     @Test
