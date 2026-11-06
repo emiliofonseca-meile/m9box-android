@@ -24,6 +24,7 @@ import android.Manifest
 import android.accounts.Account
 import android.accounts.AccountManager
 import android.app.DownloadManager
+import android.content.ActivityNotFoundException
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
@@ -140,9 +141,10 @@ class TalkActivity : AppCompatActivity() {
 
     private var fileCallback: ValueCallback<Array<Uri>>? = null
 
-    // "Enviar do dispositivo" do Talk: seletor do Android; cancelar devolve null (senão o Talk trava)
-    private val pickFiles = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        fileCallback?.onReceiveValue(uris.takeIf { it.isNotEmpty() }?.toTypedArray())
+    // "Enviar do dispositivo" do Talk: seletor do Android montado pelo próprio WebView (respeita um ou
+    // vários arquivos e os tipos aceitos); cancelar devolve null, senão o Talk trava esperando
+    private val pickFiles = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        fileCallback?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data))
         fileCallback = null
     }
 
@@ -244,7 +246,13 @@ class TalkActivity : AppCompatActivity() {
             ): Boolean {
                 fileCallback?.onReceiveValue(null)
                 fileCallback = callback
-                pickFiles.launch(params.acceptTypes.firstOrNull { it.isNotBlank() } ?: "*/*")
+                try {
+                    pickFiles.launch(params.createIntent())
+                } catch (e: ActivityNotFoundException) {
+                    Log.w(TAG, "sem seletor de arquivos", e)
+                    fileCallback?.onReceiveValue(null)
+                    fileCallback = null
+                }
                 return true
             }
 
