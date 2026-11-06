@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M9 Box: pt-BR overrides for strings that still carry the upstream brand in main/values-pt-rBR. -->
+<resources>
+    <string name="compose_activity_label">M9 Box Assistente</string>
+    <string name="ecosystem_apps_more">Mais aplicativos</string>
+    <string name="prefs_show_ecosystem_apps_summary">Sugestões de aplicativos no título de navegação</string>
+    <string name="file_migration_failed_dir_already_exists">A pasta M9 Box já existe</string>
+    <string name="auto_upload_battery_optimization_reason">A atividade em segundo plano do M9 Box é limitada pela otimização da bateria.</string>
+    <string name="store_full_desc">Seus arquivos, agenda e contatos em um só lugar.\n\nRecursos:\n* Interface limpa e moderna, adequada ao tema do seu provedor\n* Envie arquivos para a sua conta M9 Box\n* Compartilhe-os com outras pessoas\n* Mantenha seus arquivos e pastas favoritos sincronizados\n* Pesquise em todas as pastas\n* Upload automático de fotos e vídeos feitos pelo seu dispositivo\n* Mantenha-se atualizado com notificações\n* Suporte a várias contas\n* Acesso seguro com impressão digital ou PIN</string>
+</resources>

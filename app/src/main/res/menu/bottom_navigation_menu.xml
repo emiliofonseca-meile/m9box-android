@@ -31,6 +31,12 @@
         android:icon="@drawable/selector_media"
         android:title="@string/bottom_navigation_menu_media_label"/>
 
+    <item
+        android:id="@+id/nav_album"
+        android:enabled="true"
+        android:icon="@drawable/ic_album"
+        android:title="@string/drawer_item_album"/>
+
     <!--
       M9 Box: in-app calendar DISABLED (2026-07-07).
       Decision: Agenda/Contatos must sync to the device's NATIVE Calendar/Contacts
@@ -38,10 +44,6 @@
       NOT a calendar screen that lives only inside this app. The in-app module is
       kept in the tree (commented out) in case we want it back later.
     <item
-        android:id="@+id/nav_album"
-        android:enabled="true"
-        android:icon="@drawable/ic_album"
-        android:title="@string/drawer_item_album"/>
         android:id="@+id/nav_calendar"
         android:enabled="true"
         android:icon="@drawable/file_calendar"
