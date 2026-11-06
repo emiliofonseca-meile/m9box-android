@@ -68,6 +68,9 @@ class NotificationsFragment :
     private var adapter: NotificationListAdapter? = null
     private var optionalUser: Optional<User>? = null
 
+    /** M9 Box: conta destas notificações (o link do Talk abre nas Conversas dela). */
+    fun currentAccountName(): String? = optionalUser?.orElse(null)?.accountName
+
     @Inject
     lateinit var viewThemeUtils: ViewThemeUtils
 

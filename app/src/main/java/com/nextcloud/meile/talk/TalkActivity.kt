@@ -12,12 +12,18 @@
  * - XHR/fetch do Talk: script no início do documento, só na origem do Box, que põe Authorization
  *   e OCS-APIRequest (este dispensa o token CSRF da sessão, que muda a cada pedido);
  * - GET sem credencial (navegação, prévia de arquivo, avatar): shouldInterceptRequest busca com ela.
+ *
+ * Sessão: o Talk guarda na sessão PHP em que sala o usuário está. Com senha de app, o Nextcloud
+ * troca o id da sessão no segundo pedido autenticado; se esse segundo pedido for a rajada de XHR
+ * do Talk, cada um troca para um id diferente e a sala "some". Por isso, antes de abrir o Talk,
+ * dois pedidos em sequência fixam a sessão, e o cookie dela vai para a WebView.
  */
 package com.nextcloud.meile.talk
 
 import android.Manifest
 import android.accounts.Account
 import android.accounts.AccountManager
+import android.app.DownloadManager
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
@@ -27,10 +33,13 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.util.Log
 import android.view.WindowManager
 import android.webkit.CookieManager
 import android.webkit.PermissionRequest
+import android.webkit.URLUtil
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -65,6 +74,13 @@ class TalkActivity : AppCompatActivity() {
         private const val EXTRA_URL = "url"
         private const val TALK_PATH = "/index.php/apps/spreed/"
         private val STATIC = Regex("""\.(js|mjs|css|map|woff2?|ttf|otf|wasm)$""")
+        private val CALL_PATH = Regex("""/call/[A-Za-z0-9]+""")
+
+        // Mesma origem = mesmo esquema, host e porta. Só o host não basta: um link http:// (ou de
+        // outra porta) do mesmo host levaria a senha de app em texto claro ou para outro serviço.
+        private fun port(u: Uri) = if (u.port != -1) u.port else if (u.scheme.equals("https", true)) 443 else 80
+        fun sameOrigin(a: Uri, b: Uri): Boolean =
+            a.scheme.equals(b.scheme, true) && a.host.equals(b.host, true) && port(a) == port(b)
 
         // Credencial em todo XHR/fetch do Box. OCS-APIRequest faz o Nextcloud dispensar o token
         // CSRF (a sessão de um pedido com senha de app não sobrevive para o seguinte).
@@ -100,26 +116,35 @@ class TalkActivity : AppCompatActivity() {
             if (link.isNullOrEmpty()) return false
             val uri = runCatching { Uri.parse(link) }.getOrNull() ?: return false
             val path = uri.path ?: return false
-            if (!path.contains("/apps/spreed") && !path.contains("/call/")) return false
+            if (!path.contains("/apps/spreed") && !CALL_PATH.containsMatchIn(path)) return false
             val account = fileAccount(activity, accountName) ?: return false
             val base = AccountManager.get(activity).getUserData(account, AccountUtils.Constants.KEY_OC_BASE_URL)
                 ?: return false
-            if (Uri.parse(base).host != uri.host) return false
+            if (!sameOrigin(Uri.parse(base), uri)) return false
             activity.startActivity(intent(activity, account.name, link))
             return true
         }
 
+        // conta pedida; sem nome, a primeira (com nome que não existe, nenhuma: nunca abre como outro usuário)
         private fun fileAccount(context: Context, name: String?): Account? {
             val accounts = AccountManager.get(context).getAccountsByType(context.getString(R.string.account_type))
-            return accounts.firstOrNull { it.name == name } ?: accounts.firstOrNull()
+            return if (name == null) accounts.firstOrNull() else accounts.firstOrNull { it.name == name }
         }
     }
 
     private lateinit var web: WebView
-    private var host: String? = null
+    private lateinit var baseUri: Uri
     private var auth: String = ""
     private val http by lazy { MeileSync.okHttp() }
     private var pendingRequest: PermissionRequest? = null
+
+    private var fileCallback: ValueCallback<Array<Uri>>? = null
+
+    // "Enviar do dispositivo" do Talk: seletor do Android; cancelar devolve null (senão o Talk trava)
+    private val pickFiles = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        fileCallback?.onReceiveValue(uris.takeIf { it.isNotEmpty() }?.toTypedArray())
+        fileCallback = null
+    }
 
     // Câmera/microfone: o Talk pede pelo WebRTC; o Android precisa da permissão do app antes.
     private val askPermissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -145,6 +170,7 @@ class TalkActivity : AppCompatActivity() {
                 Toast.makeText(this@TalkActivity, R.string.meile_talk_no_account, Toast.LENGTH_LONG).show()
                 finish()
             } else {
+                if (savedInstanceState == null) withContext(Dispatchers.IO) { warmSession(base, credential) }
                 start(savedInstanceState, base, credential)
             }
         }
@@ -152,8 +178,7 @@ class TalkActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun start(savedInstanceState: Bundle?, base: String, credential: String) {
-        val baseUri = Uri.parse(base)
-        host = baseUri.host
+        baseUri = Uri.parse(base)
         auth = credential
         val origin = baseUri.scheme + "://" + baseUri.host + (if (baseUri.port > 0) ":" + baseUri.port else "")
 
@@ -194,24 +219,37 @@ class TalkActivity : AppCompatActivity() {
         }
 
         web.webViewClient = object : WebViewClient() {
-            // dentro do Box fica no app; link para fora vai pro navegador
+            // dentro do Box fica no app; link http(s) para fora vai pro navegador; outros esquemas, nada
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                if (request.url.host == host) return false
-                runCatching { startActivity(Intent(Intent.ACTION_VIEW, request.url)) }
+                if (sameOrigin(baseUri, request.url)) return false
+                if (request.url.scheme == "http" || request.url.scheme == "https") {
+                    runCatching { startActivity(Intent(Intent.ACTION_VIEW, request.url)) }
+                }
                 return true
             }
 
             // WebView antiga sem script de início de documento: injeta assim que a página começa
             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
-                if (!startScript && Uri.parse(url ?: "").host == host) view.evaluateJavascript(script, null)
+                if (!startScript && sameOrigin(baseUri, Uri.parse(url ?: ""))) view.evaluateJavascript(script, null)
             }
 
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
                 withCredential(request)
         }
         web.webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                view: WebView,
+                callback: ValueCallback<Array<Uri>>,
+                params: FileChooserParams
+            ): Boolean {
+                fileCallback?.onReceiveValue(null)
+                fileCallback = callback
+                pickFiles.launch(params.acceptTypes.firstOrNull { it.isNotBlank() } ?: "*/*")
+                return true
+            }
+
             override fun onPermissionRequest(request: PermissionRequest) {
-                if (request.origin.host != host) {
+                if (!sameOrigin(baseUri, request.origin)) {
                     request.deny()
                     return
                 }
@@ -228,6 +266,25 @@ class TalkActivity : AppCompatActivity() {
             }
         }
 
+        // Baixar anexo: o DownloadManager leva a credencial (só para o Box) e avisa quando terminar.
+        web.setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
+            val uri = Uri.parse(url)
+            if (!sameOrigin(baseUri, uri)) {
+                if (uri.scheme == "http" || uri.scheme == "https") runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri)) }
+                return@setDownloadListener
+            }
+            val name = URLUtil.guessFileName(url, contentDisposition, mimeType)
+            val download = DownloadManager.Request(uri)
+                .addRequestHeader("Authorization", auth)
+                .addRequestHeader("User-Agent", userAgent)
+                .setMimeType(mimeType)
+                .setTitle(name)
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name)
+            getSystemService(DownloadManager::class.java).enqueue(download)
+            Toast.makeText(this, getString(R.string.meile_talk_downloading, name), Toast.LENGTH_SHORT).show()
+        }
+
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (web.canGoBack()) web.goBack() else finish()
@@ -237,17 +294,46 @@ class TalkActivity : AppCompatActivity() {
         if (savedInstanceState != null) {
             web.restoreState(savedInstanceState)
         } else {
-            // A credencial vai só no primeiro pedido: o Nextcloud abre a sessão (senha de app) e o
-            // resto da navegação segue no cookie, como num navegador logado.
-            val url = intent.getStringExtra(EXTRA_URL) ?: (base.trimEnd('/') + TALK_PATH)
+            // link de fora do Box nunca recebe a credencial: cai na tela inicial das Conversas
+            val url = intent.getStringExtra(EXTRA_URL)?.takeIf { sameOrigin(baseUri, Uri.parse(it)) }
+                ?: (base.trimEnd('/') + TALK_PATH)
             web.loadUrl(url, mapOf("Authorization" to auth))
+        }
+    }
+
+    /** Dois pedidos autenticados em sequência fixam a sessão PHP; o cookie final vai para a WebView. */
+    private fun warmSession(base: String, credential: String) {
+        val jar = mutableMapOf<String, okhttp3.Cookie>()
+        val client = http.newBuilder().cookieJar(object : okhttp3.CookieJar {
+            override fun saveFromResponse(url: okhttp3.HttpUrl, cookies: List<okhttp3.Cookie>) {
+                cookies.forEach { jar[it.name] = it }
+            }
+            override fun loadForRequest(url: okhttp3.HttpUrl): List<okhttp3.Cookie> = jar.values.toList()
+        }).build()
+        val url = base.trimEnd('/') + "/ocs/v2.php/cloud/user?format=json"
+        try {
+            repeat(2) {
+                client.newCall(
+                    Request.Builder().url(url).header("Authorization", credential).header("OCS-APIRequest", "true").build()
+                ).execute().close()
+            }
+            val cookies = CookieManager.getInstance()
+            jar.values.forEach { c ->
+                cookies.setCookie(
+                    base,
+                    "${c.name}=${c.value}; Path=${c.path}" + (if (c.secure) "; Secure" else "") + (if (c.httpOnly) "; HttpOnly" else "")
+                )
+            }
+            cookies.flush()
+        } catch (e: Exception) {
+            Log.w(TAG, "aquecimento da sessão falhou; segue sem", e)
         }
     }
 
     /** GET do Box sem credencial (navegação, prévia, avatar): busca com ela. O resto segue normal. */
     private fun withCredential(request: WebResourceRequest): WebResourceResponse? {
         val url = request.url
-        if (url.host != host || request.method != "GET" || STATIC.containsMatchIn(url.path ?: "")) return null
+        if (!sameOrigin(baseUri, url) || request.method != "GET" || STATIC.containsMatchIn(url.path ?: "")) return null
         if (request.requestHeaders.keys.any { it.equals("Authorization", ignoreCase = true) }) return null
         return try {
             val builder = Request.Builder().url(url.toString())
@@ -293,6 +379,7 @@ class TalkActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        fileCallback?.onReceiveValue(null)
         if (::web.isInitialized) web.destroy()
         super.onDestroy()
     }

@@ -98,7 +98,7 @@ class NotificationListAdapter(
                 text = subject
                 setOnClickListener {
                     // M9 Box: link do Talk (mensagem, chamada) abre nas Conversas do app
-                    if (!TalkActivity.openIfTalkLink(fragment.requireActivity(), notification.getLink())) {
+                    if (!TalkActivity.openIfTalkLink(fragment.requireActivity(), notification.getLink(), fragment.currentAccountName())) {
                         DisplayUtils.startLinkIntent(fragment.requireActivity(), notification.getLink())
                     }
                 }
@@ -252,7 +252,7 @@ class NotificationListAdapter(
     private fun onActionClicked(holder: NotificationViewHolder, action: Action, notification: Notification) {
         setButtonEnabled(holder, false)
         if (ACTION_TYPE_WEB == action.type) {
-            if (!TalkActivity.openIfTalkLink(fragment.requireActivity(), action.link)) {
+            if (!TalkActivity.openIfTalkLink(fragment.requireActivity(), action.link, fragment.currentAccountName())) {
                 fragment.requireActivity().startActivity(
                     Intent(Intent.ACTION_VIEW).apply { data = action.link?.toUri() }
                 )
