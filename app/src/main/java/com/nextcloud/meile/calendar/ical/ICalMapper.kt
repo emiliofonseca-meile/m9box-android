@@ -392,7 +392,7 @@ object ICalMapper {
 
     private fun newCalendar(): Calendar {
         val cal = Calendar()
-        cal.add<Calendar>(ProdId("-//Meile//M9 Box Calendar//EN"))
+        cal.add<Calendar>(ProdId("-//M9 Box//Calendar//EN"))
         cal.add<Calendar>(Version().also { it.value = "2.0" })
         cal.add<Calendar>(CalScale(CalScale.VALUE_GREGORIAN))
         return cal
