@@ -6,7 +6,6 @@
  */
 package com.owncloud.android.ui.fragment
 
-import android.content.ActivityNotFoundException
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.res.ColorStateList
@@ -29,6 +28,7 @@ import com.google.android.material.button.MaterialButton
 import com.nextcloud.android.lib.resources.profile.Action
 import com.nextcloud.android.lib.resources.profile.HoverCard
 import com.nextcloud.client.account.User
+import com.nextcloud.meile.talk.TalkActivity
 import com.owncloud.android.R
 import com.owncloud.android.databinding.ProfileBottomSheetFragmentBinding
 import com.owncloud.android.utils.DisplayUtils
@@ -132,16 +132,16 @@ class ProfileBottomSheetDialog(
         iconGravity = MaterialButton.ICON_GRAVITY_START
         iconTint = ColorStateList.valueOf(config.primaryColor)
         setOnClickListener {
-            send(hoverCard.userId, action)
+            send(action)
             dismiss()
         }
     }
 
-    private fun send(userId: String, action: Action) {
+    private fun send(action: Action) {
         when (action.appId) {
             "profile" -> openWebsite(action.hyperlink)
             "core" -> sendEmail(action.hyperlink)
-            "spreed" -> openTalk(userId, action.hyperlink)
+            "spreed" -> openTalk(action.hyperlink)
         }
     }
 
@@ -158,17 +158,9 @@ class ProfileBottomSheetDialog(
         DisplayUtils.startIntentIfAppAvailable(intent, fileActivity, R.string.no_email_app_available)
     }
 
-    private fun openTalk(userId: String, hyperlink: String) {
-        try {
-            val sharingIntent = Intent(Intent.ACTION_VIEW)
-            sharingIntent.setClassName(
-                "com.nextcloud.talk2",
-                "com.nextcloud.talk.activities.MainActivity"
-            )
-            sharingIntent.putExtra("server", user.server.uri)
-            sharingIntent.putExtra("userId", userId)
-            fileActivity.startActivity(sharingIntent)
-        } catch (e: ActivityNotFoundException) {
+    // M9 Box: conversa com a pessoa nas Conversas do app (Talk do Box), não no app Nextcloud Talk
+    private fun openTalk(hyperlink: String) {
+        if (!TalkActivity.openIfTalkLink(fileActivity, hyperlink, user.accountName)) {
             openWebsite(hyperlink)
         }
     }

@@ -17,6 +17,8 @@
     <string name="meile_sync_account_type" translatable="false">network.m9.box.sync</string>
     <string name="meile_sync_account_label">M9 Box Sync</string>
     <string name="meile_sync_setup_title">Sincronizar Agenda e Contatos</string>
+    <string name="meile_talk_title">Conversas</string>
+    <string name="meile_talk_no_account">Entre na sua conta do M9 Box para usar as Conversas.</string>
     <string name="meile_sync_setup_description">Sincronize a agenda e os contatos do seu M9 Box com o calendário e a agenda nativos do celular.</string>
     <string name="meile_sync_setup_button">Ativar sincronização</string>
     <string name="meile_sync_now">Sincronizar agora</string>

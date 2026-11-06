@@ -12,4 +12,9 @@
         android:name="android.permission.REQUEST_INSTALL_PACKAGES"
         tools:node="remove" />
 
+    <!-- Conversas (TalkActivity): microfone da chamada; MODIFY_AUDIO_SETTINGS deixa o WebRTC pôr o
+         áudio em modo de comunicação (cancelamento de eco, viva-voz). A câmera já vem do main. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
 </manifest>
