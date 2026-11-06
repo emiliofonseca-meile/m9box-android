@@ -28,6 +28,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.nextcloud.android.common.ui.theme.utils.ColorRole
 import com.nextcloud.client.account.CurrentAccountProvider
+import com.nextcloud.meile.talk.TalkActivity
 import com.nextcloud.utils.extensions.setVisibleIf
 import com.nextcloud.utils.text.RichSubjectFormatter
 import com.nextcloud.utils.text.RichSubjectParam
@@ -96,7 +97,10 @@ class NotificationListAdapter(
                 setTypeface(typeface, Typeface.BOLD)
                 text = subject
                 setOnClickListener {
-                    DisplayUtils.startLinkIntent(fragment.requireActivity(), notification.getLink())
+                    // M9 Box: link do Talk (mensagem, chamada) abre nas Conversas do app
+                    if (!TalkActivity.openIfTalkLink(fragment.requireActivity(), notification.getLink())) {
+                        DisplayUtils.startLinkIntent(fragment.requireActivity(), notification.getLink())
+                    }
                 }
             }
         } else {
@@ -261,9 +265,11 @@ class NotificationListAdapter(
     private fun onActionClicked(holder: NotificationViewHolder, action: Action, notification: Notification) {
         setButtonEnabled(holder, false)
         if (ACTION_TYPE_WEB == action.type) {
-            fragment.requireActivity().startActivity(
-                Intent(Intent.ACTION_VIEW).apply { data = action.link?.toUri() }
-            )
+            if (!TalkActivity.openIfTalkLink(fragment.requireActivity(), action.link)) {
+                fragment.requireActivity().startActivity(
+                    Intent(Intent.ACTION_VIEW).apply { data = action.link?.toUri() }
+                )
+            }
         } else {
             itemClick.onActionClick(holder, action, notification)
         }

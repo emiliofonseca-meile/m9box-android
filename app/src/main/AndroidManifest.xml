@@ -500,6 +500,13 @@
             android:name="com.nextcloud.meile.sync.ui.MeileSyncSetupActivity"
             android:exported="false"
             android:label="@string/meile_sync_setup_title" />
+        <!-- M9 Box: girar a tela não pode recarregar a WebView (derrubaria a chamada) -->
+        <activity
+            android:name="com.nextcloud.meile.talk.TalkActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
+            android:exported="false"
+            android:label="@string/meile_talk_title"
+            android:theme="@style/Theme.ownCloud.NoActionBar" />
 
         <provider
             android:name=".providers.FileContentProvider"

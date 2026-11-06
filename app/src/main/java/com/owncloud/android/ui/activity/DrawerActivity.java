@@ -635,6 +635,11 @@ public abstract class DrawerActivity extends ToolbarActivity
             resetOnlyPersonalAndOnDevice();
             final Intent intent = new Intent(this, SettingsActivity.class);
             startActivity(intent);
+        } else if (itemId == R.id.nav_meile_talk) {
+            // M9 Box: Conversas (Talk do Box: chat e chamada de voz e vídeo)
+            resetOnlyPersonalAndOnDevice();
+            startActivity(com.nextcloud.meile.talk.TalkActivity.Companion.intent(
+                this, getUser().map(User::getAccountName).orElse(null), null));
         } else if (itemId == R.id.nav_meile_sync) {
             // M9 Box: open the CalDAV/CardDAV device-sync setup (Agenda + Contatos
             // into the phone's native Calendar/Contacts apps).
