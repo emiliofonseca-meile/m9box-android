@@ -26,14 +26,19 @@ import android.provider.CalendarContract.Events
 import android.provider.CalendarContract.Reminders
 import com.nextcloud.meile.calendar.model.CalendarCollection
 import com.nextcloud.meile.calendar.model.RemoteResource
+import com.nextcloud.meile.calendar.ical.events
+import com.nextcloud.meile.calendar.ical.isDateOnly
+import com.nextcloud.meile.calendar.ical.isOverride
+import com.nextcloud.meile.calendar.ical.propValue
+import com.nextcloud.meile.calendar.ical.providerZoneId
+import com.nextcloud.meile.calendar.ical.temporal
+import com.nextcloud.meile.calendar.ical.toEpochMs
+import com.nextcloud.meile.calendar.ical.uidValue
 import net.fortuna.ical4j.data.CalendarBuilder
-import net.fortuna.ical4j.model.DateTime
 import net.fortuna.ical4j.model.Property
 import net.fortuna.ical4j.model.TimeZoneRegistryFactory
 import net.fortuna.ical4j.model.component.VEvent
-import net.fortuna.ical4j.model.property.DtEnd
-import net.fortuna.ical4j.model.property.ExDate
-import net.fortuna.ical4j.model.property.RRule
+import net.fortuna.ical4j.model.property.DateListProperty
 import net.fortuna.ical4j.util.CompatibilityHints
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
@@ -117,8 +122,8 @@ class AndroidCalendarStore(private val context: Context, private val account: Ac
                 ByteArrayInputStream(resource.ics.toByteArray(StandardCharsets.UTF_8))
             )
         }.getOrNull() ?: return
-        val vevents = cal.components.filterIsInstance<VEvent>()
-        val master = vevents.firstOrNull { it.recurrenceId == null } ?: return
+        val vevents = cal.events()
+        val master = vevents.firstOrNull { !it.isOverride() } ?: return
 
         // Replace the whole resource: delete master (its exceptions/reminders
         // cascade) then re-insert from scratch — simplest correct upsert.
@@ -127,12 +132,12 @@ class AndroidCalendarStore(private val context: Context, private val account: Ac
         val masterId = insertEvent(calendarId, master, resource, syncId = resource.href, original = null)
         if (masterId > 0) insertReminders(masterId, master)
 
-        for (exception in vevents.filter { it.recurrenceId != null }) {
-            val recMs = exception.recurrenceId.date.time
+        for (exception in vevents.filter { it.isOverride() }) {
+            val recMs = exception.temporal(Property.RECURRENCE_ID)?.toEpochMs() ?: continue
             val exId = insertEvent(
                 calendarId, exception, resource,
                 syncId = "${resource.href}#$recMs",
-                original = OriginalRef(resource.href, recMs, master.startDate.date !is DateTime)
+                original = OriginalRef(resource.href, recMs, master.temporal(Property.DTSTART)?.isDateOnly() == true)
             )
             if (exId > 0) insertReminders(exId, exception)
         }
@@ -147,11 +152,11 @@ class AndroidCalendarStore(private val context: Context, private val account: Ac
         syncId: String,
         original: OriginalRef?
     ): Long {
-        val startDate = event.startDate?.date ?: return -1
-        val allDay = startDate !is DateTime
-        val startMs = startDate.time
-        val rrule = event.getProperty<RRule>(Property.RRULE)?.value
-        val endMs = event.getProperty<DtEnd>(Property.DTEND)?.date?.time
+        val startDate = event.temporal(Property.DTSTART) ?: return -1
+        val allDay = startDate.isDateOnly()
+        val startMs = startDate.toEpochMs()
+        val rrule = event.propValue(Property.RRULE)
+        val endMs = event.temporal(Property.DTEND)?.toEpochMs()
             ?: (startMs + if (allDay) DAY_MS else HOUR_MS)
 
         val values = ContentValues().apply {
@@ -161,10 +166,10 @@ class AndroidCalendarStore(private val context: Context, private val account: Ac
             put(Events.DIRTY, 0)
             // Keep the iCalendar UID: the device -> server push has to PUT the
             // series back under the SAME UID, or the server rejects/duplicates it.
-            event.uid?.value?.let { put(Events.UID_2445, it) }
-            put(Events.TITLE, event.summary?.value ?: "")
-            event.getProperty<Property>(Property.DESCRIPTION)?.value?.let { put(Events.DESCRIPTION, it) }
-            event.getProperty<Property>(Property.LOCATION)?.value?.let { put(Events.EVENT_LOCATION, it) }
+            event.uidValue()?.let { put(Events.UID_2445, it) }
+            put(Events.TITLE, event.propValue(Property.SUMMARY) ?: "")
+            event.propValue(Property.DESCRIPTION)?.let { put(Events.DESCRIPTION, it) }
+            event.propValue(Property.LOCATION)?.let { put(Events.EVENT_LOCATION, it) }
             put(Events.DTSTART, startMs)
             put(Events.ALL_DAY, if (allDay) 1 else 0)
             put(Events.EVENT_TIMEZONE, if (allDay) "UTC" else tzId(startDate))
@@ -212,8 +217,7 @@ class AndroidCalendarStore(private val context: Context, private val account: Ac
 
     // --- helpers ---------------------------------------------------------------
 
-    private fun tzId(date: net.fortuna.ical4j.model.Date): String =
-        (date as? DateTime)?.timeZone?.id ?: "UTC"
+    private fun tzId(date: java.time.temporal.Temporal): String = date.providerZoneId()
 
     private fun durationOf(deltaMs: Long, allDay: Boolean): String {
         if (allDay) {
@@ -226,10 +230,9 @@ class AndroidCalendarStore(private val context: Context, private val account: Ac
 
     private fun exDateOf(event: VEvent): String? {
         val stamps = ArrayList<String>()
-        for (property in event.properties) {
-            if (property is ExDate) {
-                val dates = property.dates
-                for (i in 0 until dates.size) stamps.add(utcStamp((dates[i] as net.fortuna.ical4j.model.Date).time))
+        for (property in event.getProperties<Property>()) {
+            if (property is DateListProperty<*> && property.name.equals(Property.EXDATE, ignoreCase = true)) {
+                for (date in property.dates) stamps.add(utcStamp(date.toEpochMs()))
             }
         }
         return if (stamps.isEmpty()) null else stamps.joinToString(",")
@@ -238,7 +241,7 @@ class AndroidCalendarStore(private val context: Context, private val account: Ac
     private fun reminderMinutes(event: VEvent): List<Int> {
         val out = ArrayList<Int>()
         for (alarm in event.alarms) {
-            val trigger = alarm.getProperty<Property>(Property.TRIGGER)?.value ?: continue
+            val trigger = alarm.propValue(Property.TRIGGER) ?: continue
             parseTriggerMinutes(trigger)?.let { out.add(it) }
         }
         return out

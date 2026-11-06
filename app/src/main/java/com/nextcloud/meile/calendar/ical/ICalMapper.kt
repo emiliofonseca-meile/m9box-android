@@ -2,7 +2,7 @@
  * M9 Box - Meile branded Nextcloud client
  * SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
  *
- * iCalendar mapping on top of ical4j 3.2.x. This is the correctness core the
+ * iCalendar mapping on top of ical4j 4.x. This is the correctness core the
  * reference RN client got wrong:
  *   - reading: RECURRENCE-ID overrides are related to their master and replace
  *     the generated occurrence (RN dropped them → edited instances showed the
@@ -22,16 +22,17 @@ import com.nextcloud.meile.calendar.model.RemoteResource
 import net.fortuna.ical4j.data.CalendarBuilder
 import net.fortuna.ical4j.model.Calendar
 import net.fortuna.ical4j.model.DateList
-import net.fortuna.ical4j.model.DateTime
+import net.fortuna.ical4j.model.Period
+import net.fortuna.ical4j.model.PropertyList
 import net.fortuna.ical4j.model.Property
 import net.fortuna.ical4j.model.TimeZone
 import net.fortuna.ical4j.model.TimeZoneRegistryFactory
+import net.fortuna.ical4j.model.component.CalendarComponent
 import net.fortuna.ical4j.model.component.VAlarm
 import net.fortuna.ical4j.model.component.VEvent
 import net.fortuna.ical4j.model.parameter.PartStat
 import net.fortuna.ical4j.model.parameter.Role
 import net.fortuna.ical4j.model.parameter.Rsvp
-import net.fortuna.ical4j.model.parameter.Value
 import net.fortuna.ical4j.model.property.Action
 import net.fortuna.ical4j.model.property.Attendee
 import net.fortuna.ical4j.model.property.CalScale
@@ -46,13 +47,21 @@ import net.fortuna.ical4j.model.property.ProdId
 import net.fortuna.ical4j.model.property.RRule
 import net.fortuna.ical4j.model.property.RecurrenceId
 import net.fortuna.ical4j.model.property.Summary
+import net.fortuna.ical4j.model.property.Trigger
 import net.fortuna.ical4j.model.property.Uid
 import net.fortuna.ical4j.model.property.Version
+import net.fortuna.ical4j.model.component.VTimeZone
 import net.fortuna.ical4j.util.CompatibilityHints
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.temporal.Temporal
 import java.util.Locale
 import java.util.UUID
 
@@ -95,21 +104,21 @@ object ICalMapper {
         windowEndMs: Long
     ): List<CalEvent> {
         val cal = runCatching { parse(resource.ics) }.getOrNull() ?: return emptyList()
-        val vevents = cal.components.filterIsInstance<VEvent>()
-        val masters = vevents.filter { it.recurrenceId == null }
-        val exceptions = vevents.filter { it.recurrenceId != null }
-        val exByMs = exceptions.associateBy { it.recurrenceId.date.time }
+        val vevents = cal.events()
+        val masters = vevents.filter { !it.isOverride() }
+        val exceptions = vevents.filter { it.isOverride() }
+        val exByMs = exceptions.mapNotNull { e -> e.temporal(Property.RECURRENCE_ID)?.let { it.toEpochMs() to e } }.toMap()
 
         val out = mutableListOf<CalEvent>()
         val handledExceptions = mutableSetOf<Long>()
 
         for (master in masters) {
-            val uid = master.uid?.value ?: continue
-            val recurs = master.getProperty<Property>(Property.RRULE) != null ||
-                master.getProperty<Property>(Property.RDATE) != null
+            val uid = master.uidValue() ?: continue
+            val recurs = master.hasProp(Property.RRULE) || master.hasProp(Property.RDATE)
+            val masterStart = master.temporal(Property.DTSTART) ?: continue
 
             if (!recurs) {
-                val s = master.startDate.date.time
+                val s = masterStart.toEpochMs()
                 val e = endMillisOf(master, s)
                 if (e > windowStartMs && s < windowEndMs) {
                     out.add(toEvent(collection, resource, master, uid, s, e, null, recurring = false, isException = false))
@@ -118,20 +127,20 @@ object ICalMapper {
             }
 
             val periods = runCatching {
-                master.getConsumedTime(DateTime(windowStartMs), DateTime(windowEndMs))
+                master.getConsumedTime(windowOf(masterStart, windowStartMs, windowEndMs))
             }.getOrNull() ?: continue
 
             for (period in periods) {
-                val slotMs = period.start.time
+                val slotMs = period.start.toEpochMs()
                 val override = exByMs[slotMs]
                 if (override != null) {
                     handledExceptions.add(slotMs)
                     if (isCancelled(override)) continue
-                    val es = override.startDate.date.time
+                    val es = override.temporal(Property.DTSTART)?.toEpochMs() ?: continue
                     val ee = endMillisOf(override, es)
                     out.add(toEvent(collection, resource, override, uid, es, ee, slotMs, recurring = true, isException = true))
                 } else {
-                    out.add(toEvent(collection, resource, master, uid, slotMs, period.end.time, slotMs, recurring = true, isException = false))
+                    out.add(toEvent(collection, resource, master, uid, slotMs, period.end.toEpochMs(), slotMs, recurring = true, isException = false))
                 }
             }
         }
@@ -139,11 +148,11 @@ object ICalMapper {
         // Detached overrides whose new time moved into the window while their
         // original slot fell outside the expanded range.
         for (override in exceptions) {
-            val recMs = override.recurrenceId.date.time
+            val recMs = override.temporal(Property.RECURRENCE_ID)?.toEpochMs() ?: continue
             if (recMs in handledExceptions) continue
             if (isCancelled(override)) continue
-            val uid = override.uid?.value ?: continue
-            val es = override.startDate.date.time
+            val uid = override.uidValue() ?: continue
+            val es = override.temporal(Property.DTSTART)?.toEpochMs() ?: continue
             val ee = endMillisOf(override, es)
             if (ee > windowStartMs && es < windowEndMs) {
                 out.add(toEvent(collection, resource, override, uid, es, ee, recMs, recurring = true, isException = true))
@@ -167,12 +176,12 @@ object ICalMapper {
         calendarHref = collection.href,
         resourceHref = resource.href,
         etag = resource.etag,
-        summary = event.summary?.value ?: "",
-        location = event.getProperty<Location>(Property.LOCATION)?.value,
-        description = event.getProperty<Description>(Property.DESCRIPTION)?.value,
+        summary = event.propValue(Property.SUMMARY) ?: "",
+        location = event.propValue(Property.LOCATION),
+        description = event.propValue(Property.DESCRIPTION),
         start = start,
         end = end,
-        allDay = event.startDate.date !is DateTime,
+        allDay = event.temporal(Property.DTSTART)?.isDateOnly() == true,
         color = collection.color,
         recurring = recurring,
         recurrenceId = recurrenceId,
@@ -180,21 +189,21 @@ object ICalMapper {
     )
 
     private fun endMillisOf(event: VEvent, startMs: Long): Long {
-        event.getProperty<DtEnd>(Property.DTEND)?.let { return it.date.time }
-        val allDay = event.startDate.date !is DateTime
+        event.temporal(Property.DTEND)?.let { return it.toEpochMs() }
+        val allDay = event.temporal(Property.DTSTART)?.isDateOnly() == true
         return startMs + if (allDay) DAY_MS else HOUR_MS
     }
 
     private fun isCancelled(event: VEvent): Boolean =
-        event.getProperty<Property>(Property.STATUS)?.value.equals("CANCELLED", ignoreCase = true)
+        event.propValue(Property.STATUS).equals("CANCELLED", ignoreCase = true)
 
     // --- WRITE: build / edit / delete ----------------------------------------
 
     fun buildIcs(draft: EventDraft): String {
         val cal = newCalendar()
-        val tz = tzOf(draft.timeZoneId)
-        if (!draft.allDay && tz != null) cal.components.add(tz.vTimeZone)
-        cal.components.add(buildVEvent(draft, draft.uid ?: newUid(), tz))
+        val zone = zoneOf(draft.timeZoneId)
+        ensureVTimeZone(cal, draft)
+        cal.addComponent(buildVEvent(draft, draft.uid ?: newUid(), zone))
         return cal.toString()
     }
 
@@ -211,25 +220,19 @@ object ICalMapper {
         exDatesMs: List<Long> = emptyList()
     ): String {
         val cal = newCalendar()
-        val tz = tzOf(master.timeZoneId)
-        if (!master.allDay && tz != null) cal.components.add(tz.vTimeZone)
+        val zone = zoneOf(master.timeZoneId)
+        ensureVTimeZone(cal, master)
 
         val uid = master.uid ?: newUid()
-        val masterEvent = buildVEvent(master, uid, tz)
-        if (exDatesMs.isNotEmpty()) {
-            val dateList = DateList(if (master.allDay) Value.DATE else Value.DATE_TIME)
-            for (ms in exDatesMs) dateList.add(dateValue(ms, master.allDay, tz))
-            masterEvent.properties.add(ExDate(dateList))
-        }
-        cal.components.add(masterEvent)
+        val masterEvent = buildVEvent(master, uid, zone)
+        if (exDatesMs.isNotEmpty()) masterEvent.addProp(exDateOf(exDatesMs, master.allDay, zone))
+        cal.addComponent(masterEvent)
 
         for (exception in exceptions) {
-            val exTz = tzOf(exception.draft.timeZoneId)
-            val event = buildVEvent(exception.draft, uid, exTz)
-            event.properties.add(
-                recurrenceIdFor(exception.recurrenceIdMs, exception.draft.allDay, exTz)
-            )
-            cal.components.add(event)
+            val exZone = zoneOf(exception.draft.timeZoneId)
+            val event = buildVEvent(exception.draft, uid, exZone)
+            event.addProp(recurrenceIdFor(exception.recurrenceIdMs, exception.draft.allDay, exZone))
+            cal.addComponent(event)
         }
         return cal.toString()
     }
@@ -254,27 +257,27 @@ object ICalMapper {
     ): String {
         val cal = runCatching { parse(existingIcs) }.getOrNull()
             ?: return buildSeriesIcs(master, exceptions, exDatesMs)
-        val vevents = cal.components.filterIsInstance<VEvent>()
-        val masterEvent = vevents.firstOrNull { it.recurrenceId == null }
+        val vevents = cal.events()
+        val masterEvent = vevents.firstOrNull { !it.isOverride() }
             ?: return buildSeriesIcs(master, exceptions, exDatesMs)
 
-        val tz = tzOf(master.timeZoneId)
-        applyFieldsToMaster(masterEvent, master, tz)
-        applyDeviceOwnedFields(masterEvent, master, tz, exDatesMs)
-        ensureVTimeZone(cal, master, tz)
+        val zone = zoneOf(master.timeZoneId)
+        applyFieldsToMaster(masterEvent, master, zone)
+        applyDeviceOwnedFields(masterEvent, master, zone, exDatesMs)
+        ensureVTimeZone(cal, master)
 
         for (exception in exceptions) {
-            val exTz = tzOf(exception.draft.timeZoneId)
+            val exZone = zoneOf(exception.draft.timeZoneId)
             val existing = vevents.firstOrNull {
-                it.recurrenceId?.date?.time == exception.recurrenceIdMs
+                it.temporal(Property.RECURRENCE_ID)?.toEpochMs() == exception.recurrenceIdMs
             }
             if (existing != null) {
-                applyFieldsToMaster(existing, exception.draft, exTz)
-                applyDeviceOwnedFields(existing, exception.draft, exTz, exDatesMs = emptyList())
+                applyFieldsToMaster(existing, exception.draft, exZone)
+                applyDeviceOwnedFields(existing, exception.draft, exZone, exDatesMs = emptyList())
             } else {
-                val added = buildVEvent(exception.draft, masterEvent.uid?.value ?: newUid(), exTz)
-                added.properties.add(recurrenceIdFor(exception.recurrenceIdMs, exception.draft.allDay, exTz))
-                cal.components.add(added)
+                val added = buildVEvent(exception.draft, masterEvent.uidValue() ?: newUid(), exZone)
+                added.addProp(recurrenceIdFor(exception.recurrenceIdMs, exception.draft.allDay, exZone))
+                cal.addComponent(added)
             }
         }
         return cal.toString()
@@ -289,47 +292,34 @@ object ICalMapper {
     private fun applyDeviceOwnedFields(
         event: VEvent,
         draft: EventDraft,
-        tz: TimeZone?,
+        zone: ZoneId?,
         exDatesMs: List<Long>
     ) {
         // Recurrence: the provider row IS the current state, so a cleared RRULE
         // means the user turned repetition off.
-        if (draft.rrule.isNullOrBlank()) removeProperties(event, Property.RRULE)
-        else replaceProperty(event, Property.RRULE, RRule(draft.rrule))
+        if (draft.rrule.isNullOrBlank()) event.removeProps(Property.RRULE)
+        else event.replaceProp(RRule<Temporal>(draft.rrule))
 
-        removeProperties(event, Property.EXDATE)
-        if (exDatesMs.isNotEmpty()) {
-            val dateList = DateList(if (draft.allDay) Value.DATE else Value.DATE_TIME)
-            for (ms in exDatesMs) dateList.add(dateValue(ms, draft.allDay, tz))
-            event.properties.add(ExDate(dateList))
-        }
+        event.removeProps(Property.EXDATE)
+        if (exDatesMs.isNotEmpty()) event.addProp(exDateOf(exDatesMs, draft.allDay, zone))
 
         // Reminders: replace only the DISPLAY alarms we map; EMAIL/AUDIO alarms
         // configured on the server side survive untouched.
-        val displayAlarms = event.components.filterIsInstance<VAlarm>()
-            .filter { it.getProperty<Action>(Property.ACTION)?.value.equals("DISPLAY", ignoreCase = true) }
-        event.components.removeAll(displayAlarms)
-        for (reminder in draft.reminders) {
-            val alarm = VAlarm(Duration.ofMinutes(-reminder.minutesBefore.toLong()))
-            alarm.properties.add(Action.DISPLAY)
-            alarm.properties.add(Description(draft.summary))
-            event.components.add(alarm)
-        }
+        val displayAlarms = event.componentList.all.filterIsInstance<VAlarm>()
+            .filter { it.propValue(Property.ACTION).equals("DISPLAY", ignoreCase = true) }
+        var children = event.componentList
+        for (alarm in displayAlarms) children = children.remove(alarm)
+        event.componentList = children
+        for (reminder in draft.reminders) event.addChild(displayAlarm(draft, reminder.minutesBefore))
 
         // Guests: only touched when the device actually manages them, so an event
         // organized elsewhere keeps its attendee list intact.
         if (draft.attendees.isEmpty()) return
-        removeProperties(event, Property.ATTENDEE)
-        for (email in draft.attendees) {
-            val attendee = Attendee("mailto:$email")
-            attendee.parameters.add(Role.REQ_PARTICIPANT)
-            attendee.parameters.add(PartStat.NEEDS_ACTION)
-            attendee.parameters.add(Rsvp.TRUE)
-            event.properties.add(attendee)
-        }
-        if (event.getProperty<Organizer>(Property.ORGANIZER) == null) {
+        event.removeProps(Property.ATTENDEE)
+        for (email in draft.attendees) event.addProp(attendeeOf(email))
+        if (!event.hasProp(Property.ORGANIZER)) {
             draft.organizerEmail?.takeIf { it.isNotBlank() }?.let {
-                event.properties.add(Organizer("mailto:$it"))
+                event.addProp(Organizer("mailto:$it"))
             }
         }
     }
@@ -341,28 +331,28 @@ object ICalMapper {
         occurrenceMs: Long
     ): ScopedWrite {
         val cal = parse(existingIcs)
-        val tz = tzOf(draft.timeZoneId)
-        val vevents = cal.components.filterIsInstance<VEvent>()
-        val master = vevents.firstOrNull { it.recurrenceId == null }
+        val zone = zoneOf(draft.timeZoneId)
+        val vevents = cal.events()
+        val master = vevents.firstOrNull { !it.isOverride() }
             ?: return ScopedWrite(buildIcs(draft), null)
-        val uid = master.uid?.value ?: newUid()
+        val uid = master.uidValue() ?: newUid()
 
         when (scope) {
             RecurrenceScope.ALL -> {
-                applyFieldsToMaster(master, draft, tz)
-                ensureVTimeZone(cal, draft, tz)
+                applyFieldsToMaster(master, draft, zone)
+                ensureVTimeZone(cal, draft)
             }
 
             RecurrenceScope.THIS -> {
                 // Drop any existing override for this slot, then add a fresh one
                 // with the same UID + RECURRENCE-ID in the SAME resource.
-                cal.components.removeAll(
-                    vevents.filter { it.recurrenceId != null && it.recurrenceId.date.time == occurrenceMs }
+                cal.removeComponents(
+                    vevents.filter { it.temporal(Property.RECURRENCE_ID)?.toEpochMs() == occurrenceMs }
                 )
-                val exception = buildVEvent(draft, uid, tz)
-                exception.properties.add(recurrenceIdFor(occurrenceMs, draft.allDay, tz))
-                ensureVTimeZone(cal, draft, tz)
-                cal.components.add(exception)
+                val exception = buildVEvent(draft, uid, zone)
+                exception.addProp(recurrenceIdFor(occurrenceMs, draft.allDay, zone))
+                ensureVTimeZone(cal, draft)
+                cal.addComponent(exception)
             }
 
             RecurrenceScope.THIS_AND_FUTURE -> {
@@ -384,17 +374,14 @@ object ICalMapper {
         if (scope == RecurrenceScope.ALL) return ScopedDelete(null, deleteResource = true)
 
         val cal = parse(existingIcs)
-        val master = cal.components.filterIsInstance<VEvent>().firstOrNull { it.recurrenceId == null }
+        val master = cal.events().firstOrNull { !it.isOverride() }
             ?: return ScopedDelete(null, deleteResource = true)
-        val allDay = master.startDate.date !is DateTime
-        val tz = (master.startDate.date as? DateTime)?.timeZone
+        val start = master.temporal(Property.DTSTART)
+        val allDay = start?.isDateOnly() == true
+        val zone = (start as? ZonedDateTime)?.zone
 
         when (scope) {
-            RecurrenceScope.THIS -> {
-                val dateList = DateList(if (allDay) Value.DATE else Value.DATE_TIME)
-                dateList.add(dateValue(occurrenceMs, allDay, tz))
-                master.properties.add(ExDate(dateList))
-            }
+            RecurrenceScope.THIS -> master.addProp(exDateOf(listOf(occurrenceMs), allDay, zone))
             RecurrenceScope.THIS_AND_FUTURE -> truncateMasterUntil(master, occurrenceMs - 1000L)
             RecurrenceScope.ALL -> {}
         }
@@ -405,86 +392,77 @@ object ICalMapper {
 
     private fun newCalendar(): Calendar {
         val cal = Calendar()
-        cal.properties.add(ProdId("-//Meile//M9 Box Calendar//EN"))
-        cal.properties.add(Version.VERSION_2_0)
-        cal.properties.add(CalScale.GREGORIAN)
+        cal.add<Calendar>(ProdId("-//Meile//M9 Box Calendar//EN"))
+        cal.add<Calendar>(Version().also { it.value = "2.0" })
+        cal.add<Calendar>(CalScale(CalScale.VALUE_GREGORIAN))
         return cal
     }
 
-    private fun buildVEvent(draft: EventDraft, uid: String, tz: TimeZone?): VEvent {
-        val event = VEvent()
-        event.properties.add(Uid(uid))
-        event.properties.add(DtStamp())
-        if (draft.allDay) {
-            event.properties.add(DtStart(net.fortuna.ical4j.model.Date(ymd(draft.start))))
-            event.properties.add(DtEnd(net.fortuna.ical4j.model.Date(ymd(draft.end))))
-        } else {
-            event.properties.add(DtStart(dateTimeIn(draft.start, tz)))
-            event.properties.add(DtEnd(dateTimeIn(draft.end, tz)))
-        }
-        event.properties.add(Summary(draft.summary))
-        draft.location?.takeIf { it.isNotBlank() }?.let { event.properties.add(Location(it)) }
-        draft.description?.takeIf { it.isNotBlank() }?.let { event.properties.add(Description(it)) }
-        draft.rrule?.takeIf { it.isNotBlank() }?.let { event.properties.add(RRule(it)) }
+    private fun buildVEvent(draft: EventDraft, uid: String, zone: ZoneId?): VEvent {
+        val event = VEvent(false)
+        event.addProp(Uid(uid))
+        event.addProp(DtStamp())
+        addTimes(event, draft, zone)
+        event.addProp(Summary(draft.summary))
+        draft.location?.takeIf { it.isNotBlank() }?.let { event.addProp(Location(it)) }
+        draft.description?.takeIf { it.isNotBlank() }?.let { event.addProp(Description(it)) }
+        draft.rrule?.takeIf { it.isNotBlank() }?.let { event.addProp(RRule<Temporal>(it)) }
 
         draft.organizerEmail?.takeIf { it.isNotBlank() }?.let {
-            event.properties.add(Organizer("mailto:$it"))
+            event.addProp(Organizer("mailto:$it"))
         }
-        for (email in draft.attendees) {
-            val attendee = Attendee("mailto:$email")
-            attendee.parameters.add(Role.REQ_PARTICIPANT)
-            attendee.parameters.add(PartStat.NEEDS_ACTION)
-            attendee.parameters.add(Rsvp.TRUE)
-            event.properties.add(attendee)
-        }
-        for (reminder in draft.reminders) {
-            val alarm = VAlarm(Duration.ofMinutes(-reminder.minutesBefore.toLong()))
-            alarm.properties.add(Action.DISPLAY)
-            alarm.properties.add(Description(draft.summary))
-            // getAlarms() returns a defensive copy in ical4j 3.2; the live backing
-            // that gets serialized is the components list.
-            event.components.add(alarm)
-        }
+        for (email in draft.attendees) event.addProp(attendeeOf(email))
+        for (reminder in draft.reminders) event.addChild(displayAlarm(draft, reminder.minutesBefore))
         return event
     }
 
-    private fun applyFieldsToMaster(master: VEvent, draft: EventDraft, tz: TimeZone?) {
-        replaceProperty(master, Property.SUMMARY, Summary(draft.summary))
-        if (draft.allDay) {
-            replaceProperty(master, Property.DTSTART, DtStart(net.fortuna.ical4j.model.Date(ymd(draft.start))))
-            replaceProperty(master, Property.DTEND, DtEnd(net.fortuna.ical4j.model.Date(ymd(draft.end))))
-        } else {
-            replaceProperty(master, Property.DTSTART, DtStart(dateTimeIn(draft.start, tz)))
-            replaceProperty(master, Property.DTEND, DtEnd(dateTimeIn(draft.end, tz)))
-        }
-        removeProperties(master, Property.LOCATION)
-        draft.location?.takeIf { it.isNotBlank() }?.let { master.properties.add(Location(it)) }
-        removeProperties(master, Property.DESCRIPTION)
-        draft.description?.takeIf { it.isNotBlank() }?.let { master.properties.add(Description(it)) }
+    private fun addTimes(event: VEvent, draft: EventDraft, zone: ZoneId?) {
+        event.replaceProp(DtStart<Temporal>(temporalOf(draft.start, draft.allDay, zone)))
+        event.replaceProp(DtEnd<Temporal>(temporalOf(draft.end, draft.allDay, zone)))
+    }
+
+    private fun temporalOf(ms: Long, allDay: Boolean, zone: ZoneId?): Temporal =
+        if (allDay) dateOnly(ms) else dateTimeIn(ms, zone)
+
+    private fun attendeeOf(email: String): Attendee {
+        val attendee = Attendee("mailto:$email")
+        attendee.add<Attendee>(Role.REQ_PARTICIPANT)
+        attendee.add<Attendee>(PartStat.NEEDS_ACTION)
+        attendee.add<Attendee>(Rsvp.TRUE)
+        return attendee
+    }
+
+    private fun displayAlarm(draft: EventDraft, minutesBefore: Int): VAlarm {
+        val alarm = VAlarm(PropertyList())
+        alarm.addProp(Trigger(Duration.ofMinutes(-minutesBefore.toLong())))
+        alarm.addProp(Action(Action.VALUE_DISPLAY))
+        alarm.addProp(Description(draft.summary))
+        return alarm
+    }
+
+    private fun exDateOf(ms: List<Long>, allDay: Boolean, zone: ZoneId?): ExDate<Temporal> =
+        ExDate(DateList(ms.map { temporalOf(it, allDay, zone) }))
+
+    private fun applyFieldsToMaster(master: VEvent, draft: EventDraft, zone: ZoneId?) {
+        master.replaceProp(Summary(draft.summary))
+        addTimes(master, draft, zone)
+        master.removeProps(Property.LOCATION)
+        draft.location?.takeIf { it.isNotBlank() }?.let { master.addProp(Location(it)) }
+        master.removeProps(Property.DESCRIPTION)
+        draft.description?.takeIf { it.isNotBlank() }?.let { master.addProp(Description(it)) }
         // A supplied RRULE replaces the recurrence; a null one preserves the
         // existing series untouched (we never silently drop it). EXDATE and
         // existing alarms are always preserved.
-        draft.rrule?.takeIf { it.isNotBlank() }?.let { replaceProperty(master, Property.RRULE, RRule(it)) }
+        draft.rrule?.takeIf { it.isNotBlank() }?.let { master.replaceProp(RRule<Temporal>(it)) }
     }
 
-    private fun replaceProperty(event: VEvent, name: String, property: Property) {
-        removeProperties(event, name)
-        event.properties.add(property)
-    }
-
-    private fun removeProperties(event: VEvent, name: String) {
-        event.properties.filter { it.name.equals(name, ignoreCase = true) }
-            .forEach { event.properties.remove(it) }
-    }
-
-    private fun recurrenceIdFor(occurrenceMs: Long, allDay: Boolean, tz: TimeZone?): RecurrenceId =
-        if (allDay) RecurrenceId(net.fortuna.ical4j.model.Date(ymd(occurrenceMs)))
-        else RecurrenceId(dateTimeIn(occurrenceMs, tz))
+    private fun recurrenceIdFor(occurrenceMs: Long, allDay: Boolean, zone: ZoneId?): RecurrenceId<Temporal> =
+        RecurrenceId(temporalOf(occurrenceMs, allDay, zone))
 
     private fun truncateMasterUntil(master: VEvent, untilMs: Long) {
-        val rrule = master.getProperty<RRule>(Property.RRULE) ?: return
+        val rrule = master.prop(Property.RRULE) ?: return
         val truncated = truncateRruleValue(rrule.value, untilMs)
-        replaceProperty(master, Property.RRULE, RRule(truncated))
+        master.replaceProp(RRule<Temporal>(truncated))
     }
 
     internal fun truncateRruleValue(rruleValue: String, untilMs: Long): String {
@@ -493,22 +471,30 @@ object ICalMapper {
         return (parts + "UNTIL=${utcStamp(untilMs)}").joinToString(";")
     }
 
-    private fun dateTimeIn(millis: Long, tz: TimeZone?): DateTime {
-        val dt = DateTime(millis) // constructed as UTC
-        if (tz != null) dt.timeZone = tz // setTimeZone → emits TZID and drops the Z suffix
-        return dt
+    /** Expansion window in the same temporal type as the series start (ical4j 4 needs them to match). */
+    private fun windowOf(start: Temporal, fromMs: Long, toMs: Long): Period<Temporal> = when (start) {
+        is LocalDate -> Period(dateOnly(fromMs), dateOnly(toMs))
+        is LocalDateTime -> Period(
+            Instant.ofEpochMilli(fromMs).atZone(ZoneId.systemDefault()).toLocalDateTime(),
+            Instant.ofEpochMilli(toMs).atZone(ZoneId.systemDefault()).toLocalDateTime()
+        )
+        is ZonedDateTime -> Period(
+            Instant.ofEpochMilli(fromMs).atZone(start.zone),
+            Instant.ofEpochMilli(toMs).atZone(start.zone)
+        )
+        else -> Period(Instant.ofEpochMilli(fromMs), Instant.ofEpochMilli(toMs))
     }
 
-    private fun dateValue(millis: Long, allDay: Boolean, tz: TimeZone?): net.fortuna.ical4j.model.Date =
-        if (allDay) net.fortuna.ical4j.model.Date(ymd(millis)) else dateTimeIn(millis, tz)
+    private fun zoneOf(id: String): ZoneId? =
+        runCatching { tzOf(id)?.let { ZoneId.of(it.id) } }.getOrNull()
 
-    private fun ensureVTimeZone(cal: Calendar, draft: EventDraft, tz: TimeZone?) {
-        if (draft.allDay || tz == null) return
-        val already = cal.components.any {
-            it is net.fortuna.ical4j.model.component.VTimeZone &&
-                it.timeZoneId?.value == tz.id
+    private fun ensureVTimeZone(cal: Calendar, draft: EventDraft) {
+        if (draft.allDay) return
+        val tz = tzOf(draft.timeZoneId) ?: return
+        val already = cal.getComponents<CalendarComponent>().any {
+            it is VTimeZone && it.propValue(Property.TZID) == tz.id
         }
-        if (!already) cal.components.add(tz.vTimeZone)
+        if (!already) cal.addComponent(tz.vTimeZone)
     }
 
     private fun newUid(): String = "${UUID.randomUUID()}@m9box"

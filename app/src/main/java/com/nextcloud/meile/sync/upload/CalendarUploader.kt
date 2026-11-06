@@ -27,6 +27,9 @@ import com.nextcloud.meile.calendar.caldav.CalDavClient
 import com.nextcloud.meile.calendar.caldav.CalDavException
 import com.nextcloud.meile.calendar.ical.ExceptionDraft
 import com.nextcloud.meile.calendar.ical.ICalMapper
+import com.nextcloud.meile.calendar.ical.events
+import com.nextcloud.meile.calendar.ical.isOverride
+import com.nextcloud.meile.calendar.ical.uidValue
 import com.nextcloud.meile.calendar.model.EventDraft
 import com.nextcloud.meile.calendar.model.Reminder
 import java.util.TimeZone
@@ -193,10 +196,9 @@ class CalendarUploader(
      */
     private fun serverUid(href: String): String? = runCatching {
         ICalMapper.parse(client.getResource(href).ics)
-            .components
-            .filterIsInstance<net.fortuna.ical4j.model.component.VEvent>()
-            .firstOrNull { it.recurrenceId == null }
-            ?.uid?.value
+            .events()
+            .firstOrNull { !it.isOverride() }
+            ?.uidValue()
     }.getOrNull()
 
     private fun remindersOf(eventId: Long): List<Reminder> {
