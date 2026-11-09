@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  M9 Box - Meile branded Nextcloud client
+  SPDX-License-Identifier: AGPL-3.0-or-later OR GPL-2.0-only
+
+  The Android 12+ splash (Theme.App.Starting in main styles.xml) shows
+  @drawable/ic_launcher_foreground, upstream's Nextcloud mark. Same name on
+  purpose: the flavor wins at merge time and the M9 Box icon shows instead.
+-->
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@drawable/ic_launcher_fg_m9"
+    android:gravity="center"
+    android:antialias="true" />
