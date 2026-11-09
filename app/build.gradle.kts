@@ -141,6 +141,14 @@ android {
         // when a flavor shows its own versionName to users.
         buildConfigField("String", "UPSTREAM_VERSION", "\"$upstreamVersionName\"")
 
+        // M9 Box: key of the analytics account code (M9Analytics). Kept out of the public repo:
+        // export M9_ANALYTICS_KEY from the Keychain (m9box-analytics-key) before a store build.
+        buildConfigField(
+            "String",
+            "M9_ANALYTICS_KEY",
+            "\"${providers.environmentVariable("M9_ANALYTICS_KEY").getOrElse("")}\""
+        )
+
         // adapt structure from Eclipse to Gradle/Android Studio expectations;
         // see http://tools.android.com/tech-docs/new-build-system/user-guide#TOC-Configuring-the-Structure
 
@@ -198,8 +206,8 @@ android {
                 //   versionName: 1.0.N, N + 1 (1.0.0, 1.0.1, ...). Only the owner moves it to 1.1.0.
                 //   versionCode: + 1; Play rejects a reused code.
                 // The User-Agent still carries BuildConfig.UPSTREAM_VERSION, not versionName.
-                versionName = "1.0.3"
-                versionCode = 7
+                versionName = "1.0.4"
+                versionCode = 8
             }
         }
     }
@@ -562,7 +570,9 @@ dependencies {
     // endregion
 
     // region M9 Box: Firebase Analytics (usage only; config in src/meile: setup.xml + AndroidManifest.xml)
+    // Only meile ships it; the others compile M9Analytics against it and skip it at runtime.
     add("meileImplementation", libs.firebase.analytics)
+    compileOnly(libs.firebase.analytics)
     // endregion
 
     // region common

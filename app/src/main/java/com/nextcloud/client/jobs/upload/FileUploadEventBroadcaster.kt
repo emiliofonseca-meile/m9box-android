@@ -10,6 +10,7 @@ package com.nextcloud.client.jobs.upload
 import android.content.Context
 import android.content.Intent
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.nextcloud.meile.analytics.M9Analytics
 import com.owncloud.android.lib.common.operations.RemoteOperationResult
 import com.owncloud.android.lib.common.utils.Log_OC
 import com.owncloud.android.operations.UploadFileOperation
@@ -95,6 +96,9 @@ class FileUploadEventBroadcaster(private val broadcastManager: LocalBroadcastMan
      */
     fun sendUploadCompleted(upload: UploadFileOperation, uploadResult: RemoteOperationResult<*>, context: Context) {
         Log_OC.d(TAG, "Upload completed broadcast sent")
+        if (uploadResult.isSuccess) {
+            M9Analytics.upload(context, upload.createdBy != UploadFileOperation.CREATED_BY_USER)
+        }
 
         val intent = Intent(ACTION_UPLOAD_COMPLETED).apply {
             // real remote path, after possible automatic renaming

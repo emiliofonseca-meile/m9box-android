@@ -468,6 +468,7 @@ public class MainApp extends Application implements HasAndroidInjector, NetworkC
                 if (!(activity instanceof LauncherActivity)) {
                     passCodeManager.onActivityResumed(activity);
                 }
+                com.nextcloud.meile.analytics.M9Analytics.identify(activity);
             }
 
             @Override

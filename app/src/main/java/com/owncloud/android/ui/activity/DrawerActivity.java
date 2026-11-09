@@ -600,6 +600,7 @@ public abstract class DrawerActivity extends ToolbarActivity
     // region navigation item click
     private void onNavigationItemClicked(final MenuItem menuItem) {
         int itemId = menuItem.getItemId();
+        com.nextcloud.meile.analytics.M9Analytics.menu(this, itemId);
 
         if (itemId == R.id.nav_all_files || itemId == R.id.nav_personal_files) {
             closeDrawer();
@@ -706,6 +707,7 @@ public abstract class DrawerActivity extends ToolbarActivity
     private void handleBottomNavigationViewClicks() {
         bottomNavigationView.setOnItemSelectedListener(menuItem -> {
             int menuItemId = menuItem.getItemId();
+            com.nextcloud.meile.analytics.M9Analytics.menu(this, menuItemId);
             exitSelectionMode();
             resetOnlyPersonalAndOnDevice();
 
