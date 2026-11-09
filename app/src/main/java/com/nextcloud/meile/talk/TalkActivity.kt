@@ -23,6 +23,7 @@ package com.nextcloud.meile.talk
 import android.Manifest
 import android.accounts.Account
 import android.accounts.AccountManager
+import android.accounts.OnAccountsUpdateListener
 import android.app.DownloadManager
 import android.content.ActivityNotFoundException
 import android.annotation.SuppressLint
@@ -58,9 +59,11 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import com.nextcloud.client.account.UserAccountManagerImpl
 import com.nextcloud.meile.sync.MeileSync
 import com.owncloud.android.R
 import com.owncloud.android.lib.common.accounts.AccountUtils
+import com.owncloud.android.ui.activity.UserInfoActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -138,6 +141,12 @@ class TalkActivity : AppCompatActivity() {
     private var auth: String = ""
     private val http by lazy { MeileSync.okHttp() }
     private var pendingRequest: PermissionRequest? = null
+    private var accountName: String? = null
+
+    // conta removida (pelo "Sair" daqui ou de outro lugar): não fica uma tela logada como ninguém
+    private val accountsListener = OnAccountsUpdateListener { accounts ->
+        if (accounts.none { it.name == accountName && it.type == getString(R.string.account_type) }) finish()
+    }
 
     private var fileCallback: ValueCallback<Array<Uri>>? = null
 
@@ -158,6 +167,8 @@ class TalkActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val account = fileAccount(this, intent.getStringExtra(EXTRA_ACCOUNT))
+        accountName = account?.name
+        if (account != null) AccountManager.get(this).addOnAccountsUpdatedListener(accountsListener, null, false)
         lifecycleScope.launch {
             // o AccountManager bloqueia ao entregar a credencial: fora da thread principal
             val base = account?.let { AccountManager.get(this@TalkActivity).getUserData(it, AccountUtils.Constants.KEY_OC_BASE_URL) }
@@ -223,6 +234,14 @@ class TalkActivity : AppCompatActivity() {
         web.webViewClient = object : WebViewClient() {
             // dentro do Box fica no app; link http(s) para fora vai pro navegador; outros esquemas, nada
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                // "Sair" do menu do Nextcloud = sair da conta. Quem está logada é a conta do app, não a
+                // página (e a saída web daria "CSRF check failed": o pedido vai sem o cookie), então abre
+                // a mesma confirmação do "Sair" do menu lateral; removida a conta, a tela fecha sozinha.
+                if (sameOrigin(baseUri, request.url) && request.url.path?.endsWith("/logout") == true) {
+                    UserAccountManagerImpl.fromContext(this@TalkActivity).getUser(accountName.orEmpty())
+                        .ifPresent { UserInfoActivity.openAccountRemovalDialog(it, supportFragmentManager) }
+                    return true
+                }
                 if (sameOrigin(baseUri, request.url)) return false
                 if (request.url.scheme == "http" || request.url.scheme == "https") {
                     runCatching { startActivity(Intent(Intent.ACTION_VIEW, request.url)) }
@@ -387,6 +406,7 @@ class TalkActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (accountName != null) AccountManager.get(this).removeOnAccountsUpdatedListener(accountsListener)
         fileCallback?.onReceiveValue(null)
         if (::web.isInitialized) web.destroy()
         super.onDestroy()
