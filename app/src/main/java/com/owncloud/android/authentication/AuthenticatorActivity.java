@@ -189,6 +189,8 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
     public static final int NO_ICON = 0;
     public static final String EMPTY_STRING = "";
     public static final int REQUEST_CODE_FIRST_RUN = 102;
+    // M9 Box: the login tab, closed by finishActivity() once polling sees the grant
+    private static final int REQUEST_CODE_LOGIN_TAB = 103;
 
     /// parameters from EXTRAs in starter Intent
     private byte mAction;
@@ -406,12 +408,20 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
     private boolean isRedirectedToTheDefaultBrowser = false;
     private String baseUrl;
 
+    private boolean isPollingLogin = false;
+
+    // M9 Box: polls from the moment the login tab opens (not only when the user comes back), every
+    // 5 s like the desktop client, and only once even if the app is resumed again.
     private void poolLogin() {
+        if (isPollingLogin) {
+            return;
+        }
+        isPollingLogin = true;
         loginFlowExecutorService.scheduleWithFixedDelay(() -> {
             if (!isLoginProcessCompleted) {
                 performLoginFlowV2();
             }
-        }, 0, 30, TimeUnit.SECONDS);
+        }, 0, 5, TimeUnit.SECONDS);
     }
 
     /**
@@ -499,7 +509,13 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
         try {
             int toolbarColor = ContextCompat.getColor(this, R.color.primary);
             AuthTabIntent authTabIntent = new AuthTabIntent.Builder().setColorScheme(toolbarColor).build();
-            authTabIntent.launch(authTabResultLauncher, uri, loginScheme);
+            // M9 Box: the login v2 page never redirects back ("you can close this window"), so the
+            // tab is started for result by hand (the same intent AuthTabIntent.launch() builds) and
+            // completeLoginFlow() closes it with finishActivity() when the poll returns the grant.
+            authTabIntent.intent.setData(uri);
+            authTabIntent.intent.putExtra(AuthTabIntent.EXTRA_REDIRECT_SCHEME, loginScheme);
+            startActivityForResult(authTabIntent.intent, REQUEST_CODE_LOGIN_TAB);
+            poolLogin();
             return;
         } catch (Exception e) {
             Log_OC.e(TAG, "Auth Tab login URL launch failed: " + e);
@@ -555,7 +571,8 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
         Log_OC.d(TAG, "performLoginFlowV2 status: " + status);
         Log_OC.d(TAG, "performLoginFlowV2 response: " + response);
 
-        if (!response.isEmpty()) {
+        // M9 Box: 404 = not granted yet; polling starts with the tab now, so only a 200 completes
+        if (status == java.net.HttpURLConnection.HTTP_OK && !response.isEmpty()) {
             runOnUiThread(() -> completeLoginFlow(response, status));
         }
     }
@@ -568,6 +585,9 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
                 return;
             }
             isLoginProcessCompleted = loginUrlInfo.isValid(status);
+            if (isLoginProcessCompleted) {
+                finishActivity(REQUEST_CODE_LOGIN_TAB);
+            }
 
             if (accountSetupBinding != null) {
                 accountSetupBinding.hostUrlInput.setText("");
@@ -1561,11 +1581,6 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
         Intent intent = new Intent(this, QrCodeActivity.class);
         qrScanResultLauncher.launch(intent);
     }
-
-    private final ActivityResultLauncher<Intent> authTabResultLauncher = AuthTabIntent.registerActivityResultLauncher(
-        this,
-        result -> Log_OC.d(TAG, "Auth Tab result code: " + result.resultCode)
-    );
 
     private final ActivityResultLauncher<Intent> qrScanResultLauncher = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(),
