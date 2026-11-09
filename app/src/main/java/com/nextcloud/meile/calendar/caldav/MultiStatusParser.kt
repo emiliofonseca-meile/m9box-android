@@ -23,6 +23,7 @@ object MultiStatusParser {
     private const val NS_CS = "http://calendarserver.org/ns/"
     private const val NS_ICAL = "http://apple.com/ns/ical/"
     private const val NS_NC = "http://nextcloud.com/ns"
+    private const val DECK_BOARD = "/app-generated--deck--"
 
     private fun documentElement(xml: String): Element {
         val factory = DocumentBuilderFactory.newInstance().apply {
@@ -71,9 +72,12 @@ object MultiStatusParser {
             if (!supports(component)) continue
 
             val privileges = prop.firstChild(NS_DAV, "current-user-privilege-set")
-            val readOnly = privileges != null && privileges.childElements(NS_DAV, "privilege")
-                .none { p -> p.childElements(NS_DAV, "write").isNotEmpty() ||
-                    p.childElements(NS_DAV, "write-content").isNotEmpty() }
+            // Deck boards (app-generated--deck--board-N) only read over CalDAV: every PUT is refused,
+            // and Nextcloud answers 404 instead of 403 to hide the object. Read-only whatever the ACL says.
+            val readOnly = href.contains(DECK_BOARD) ||
+                privileges != null && privileges.childElements(NS_DAV, "privilege")
+                    .none { p -> p.childElements(NS_DAV, "write").isNotEmpty() ||
+                        p.childElements(NS_DAV, "write-content").isNotEmpty() }
 
             result.add(
                 CalendarCollection(

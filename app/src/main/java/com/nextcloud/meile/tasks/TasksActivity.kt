@@ -101,7 +101,8 @@ class TasksActivity : DrawerActivity() {
                 viewModel = current,
                 onCreate = {
                     val st = current.state.value
-                    val list = st.selectedList ?: st.lists.firstOrNull { !it.readOnly }?.href.orEmpty()
+                    val list = st.selectedList?.takeUnless(st::isReadOnly)
+                        ?: st.lists.firstOrNull { !it.readOnly }?.href.orEmpty()
                     screen = Screen.Editor(null, TaskDraft(listHref = list))
                 },
                 onOpen = { t ->
@@ -115,6 +116,7 @@ class TasksActivity : DrawerActivity() {
             is Screen.Editor -> TaskEditorScreen(
                 initial = s.initial,
                 editing = s.editing != null,
+                readOnly = s.editing != null && current.state.value.isReadOnly(s.editing.listHref),
                 lists = current.state.value.lists,
                 pickDate = ::pickDate,
                 onSave = { draft ->

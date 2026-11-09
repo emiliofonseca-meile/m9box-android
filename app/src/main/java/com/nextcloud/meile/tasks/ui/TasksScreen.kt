@@ -115,7 +115,8 @@ fun TasksScreen(
                 }
                 LazyColumn(Modifier.fillMaxWidth()) {
                     items(state.openTree, key = { it.task.resourceHref }) { (task, depth) ->
-                        TaskRow(task, depth, onToggle = { viewModel.setCompleted(task, it) }, onOpen = { onOpen(task) })
+                        TaskRow(task, depth, state.isReadOnly(task.listHref),
+                            onToggle = { viewModel.setCompleted(task, it) }, onOpen = { onOpen(task) })
                     }
                     if (state.done.isNotEmpty()) {
                         item {
@@ -126,7 +127,8 @@ fun TasksScreen(
                         }
                         if (state.showCompleted) {
                             items(state.doneTree, key = { it.task.resourceHref }) { (task, depth) ->
-                                TaskRow(task, depth, onToggle = { viewModel.setCompleted(task, it) }, onOpen = { onOpen(task) })
+                                TaskRow(task, depth, state.isReadOnly(task.listHref),
+                                    onToggle = { viewModel.setCompleted(task, it) }, onOpen = { onOpen(task) })
                             }
                         }
                     }
@@ -140,13 +142,13 @@ fun TasksScreen(
 private const val MAX_INDENT = 5
 
 @Composable
-private fun TaskRow(task: TaskItem, depth: Int, onToggle: (Boolean) -> Unit, onOpen: () -> Unit) {
+private fun TaskRow(task: TaskItem, depth: Int, readOnly: Boolean, onToggle: (Boolean) -> Unit, onOpen: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onOpen)
             .padding(start = 8.dp + 24.dp * depth.coerceAtMost(MAX_INDENT), end = 8.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Checkbox(checked = task.completed, onCheckedChange = onToggle)
+        Checkbox(checked = task.completed, onCheckedChange = onToggle, enabled = !readOnly)
         Column(Modifier.weight(1f)) {
             Text(
                 task.summary.ifBlank { "-" },

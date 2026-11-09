@@ -1468,4 +1468,5 @@
     <string name="tasks_completed_section">Concluídas (%1$d)</string>
     <string name="tasks_error_conflict">Esta tarefa foi alterada em outro lugar. A lista foi atualizada, tente novamente.</string>
     <string name="tasks_error_generic">Não foi possível concluir a operação: %1$s</string>
+    <string name="tasks_read_only">Somente leitura: altere no app de origem (por exemplo, o Deck).</string>
 </resources>

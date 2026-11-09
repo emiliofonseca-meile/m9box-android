@@ -193,6 +193,35 @@ class TaskMapperTest {
         assertEquals(listOf("Personal", "Misto"), events)
     }
 
+    // Deck 1.18 grants read + write-properties on its boards and refuses every PUT (Nextcloud answers 404).
+    @Test
+    fun `Deck boards are read-only, writable lists are not`() {
+        fun list(href: String, vararg privileges: String) = """
+ <d:response><d:href>$href</d:href>
+  <d:propstat><d:prop><d:resourcetype><d:collection/><c:calendar/></d:resourcetype>
+   <c:supported-calendar-component-set><c:comp name="VTODO"/></c:supported-calendar-component-set>
+   <d:current-user-privilege-set>${privileges.joinToString("") { "<d:privilege><d:$it/></d:privilege>" }}</d:current-user-privilege-set>
+  </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>"""
+        val home = "/remote.php/dav/calendars/alice/"
+        val xml = """<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+${list("${home}app-generated--deck--board-1/", "read", "write-properties")}
+${list("${home}app-generated--deck--board-2/", "read", "write")}
+${list("${home}tarefas/", "read", "write")}
+${list("${home}compartilhada/", "read")}
+</d:multistatus>"""
+        val readOnly = MultiStatusParser.parseCalendars(xml, home, "VTODO").associate { it.href to it.readOnly }
+        assertEquals(
+            mapOf(
+                "${home}app-generated--deck--board-1/" to true,
+                "${home}app-generated--deck--board-2/" to true,
+                "${home}tarefas/" to false,
+                "${home}compartilhada/" to true
+            ),
+            readOnly
+        )
+    }
+
     @Test
     fun `soft-deleted lists are not offered`() {
         val xml = """<?xml version="1.0"?>

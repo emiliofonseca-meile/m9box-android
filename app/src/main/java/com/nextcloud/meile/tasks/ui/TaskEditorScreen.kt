@@ -35,6 +35,8 @@ import com.owncloud.android.R
 fun TaskEditorScreen(
     initial: TaskDraft,
     editing: Boolean,
+    /** Task of a list the server will not let us write (Deck board, read-only share): view only. */
+    readOnly: Boolean,
     lists: List<CalendarCollection>,
     /** Opens a date picker; returns the picked day as UTC midnight millis. */
     pickDate: (current: Long?, onPicked: (Long) -> Unit) -> Unit,
@@ -55,6 +57,12 @@ fun TaskEditorScreen(
             stringResource(if (editing) R.string.tasks_edit else R.string.tasks_new),
             style = androidx.compose.material3.MaterialTheme.typography.titleLarge
         )
+        if (readOnly) {
+            Text(
+                stringResource(R.string.tasks_read_only),
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         OutlinedTextField(
             value = summary, onValueChange = { summary = it },
             label = { Text(stringResource(R.string.tasks_field_title)) },
@@ -91,7 +99,7 @@ fun TaskEditorScreen(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = onBack) { Text(stringResource(R.string.tasks_cancel)) }
             Button(
-                enabled = summary.isNotBlank(),
+                enabled = summary.isNotBlank() && !readOnly,
                 onClick = {
                     onSave(initial.copy(
                         summary = summary.trim(), description = notes, due = due,

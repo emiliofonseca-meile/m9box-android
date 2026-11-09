@@ -1689,4 +1689,5 @@
     <string name="tasks_completed_section">Completed (%1$d)</string>
     <string name="tasks_error_conflict">This task was changed elsewhere. The list was refreshed, please try again.</string>
     <string name="tasks_error_generic">Could not complete the operation: %1$s</string>
+    <string name="tasks_read_only">Read only: change it in the app it comes from (for example, Deck).</string>
 </resources>

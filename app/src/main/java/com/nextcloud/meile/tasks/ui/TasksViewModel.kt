@@ -43,6 +43,8 @@ class TasksViewModel(
         val showCompleted: Boolean = false
     ) {
         val visible: List<TaskItem> get() = tasks.filter { selectedList == null || it.listHref == selectedList }
+        /** List the server will not let us write (shared read-only, Deck board). */
+        fun isReadOnly(listHref: String): Boolean = lists.any { it.href == listHref && it.readOnly }
         val open: List<TaskItem> get() = visible.filter { !it.completed }.sortedWith(OPEN_ORDER)
         val done: List<TaskItem> get() = visible.filter { it.completed }.sortedWith(DONE_ORDER)
         /** [open] / [done] as subtask trees (depth-first, with indent level). */
@@ -77,9 +79,13 @@ class TasksViewModel(
 
     fun create(draft: TaskDraft) = write { repository.create(draft) }
 
-    fun update(task: TaskItem, draft: TaskDraft) = write { repository.update(task, draft) }
+    fun update(task: TaskItem, draft: TaskDraft) {
+        if (!_state.value.isReadOnly(task.listHref)) write { repository.update(task, draft) }
+    }
 
-    fun setCompleted(task: TaskItem, done: Boolean) = write { repository.setCompleted(task, done) }
+    fun setCompleted(task: TaskItem, done: Boolean) {
+        if (!_state.value.isReadOnly(task.listHref)) write { repository.setCompleted(task, done) }
+    }
 
     fun createList(name: String) = write { repository.createList(name) }
 
