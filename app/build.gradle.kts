@@ -198,8 +198,8 @@ android {
                 //   versionName: 1.0.N, N + 1 (1.0.0, 1.0.1, ...). Only the owner moves it to 1.1.0.
                 //   versionCode: + 1; Play rejects a reused code.
                 // The User-Agent still carries BuildConfig.UPSTREAM_VERSION, not versionName.
-                versionName = "1.0.2"
-                versionCode = 6
+                versionName = "1.0.3"
+                versionCode = 7
             }
         }
     }
@@ -559,6 +559,10 @@ dependencies {
 
     // region Google Play dependencies, upon each update first test: new registration, receive push
     add(gplayImplementationConfiguration, libs.bundles.gplay)
+    // endregion
+
+    // region M9 Box: Firebase Analytics (usage only; config in src/meile: setup.xml + AndroidManifest.xml)
+    add("meileImplementation", libs.firebase.analytics)
     // endregion
 
     // region common

@@ -55,4 +55,13 @@
     <!-- Splash -->
     <string name="splashScreenBold">M9</string>
     <string name="splashScreenNormal">Box</string>
+
+    <!-- Firebase (Analytics only), values from the console's google-services.json. Written by hand
+         like src/gplay/res/values/setup.xml: the project does not use the google-services plugin. -->
+    <string name="gcm_defaultSenderId" translatable="false">735322310719</string>
+    <string name="google_api_key" translatable="false">AIzaSyCaNGZx_6wqTmuOI6Da9oGzZruAqs1KM8k</string>
+    <string name="google_app_id" translatable="false">1:735322310719:android:599dd8febea5f40109508a</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyCaNGZx_6wqTmuOI6Da9oGzZruAqs1KM8k</string>
+    <string name="google_storage_bucket" translatable="false">m9box-dcc70.firebasestorage.app</string>
+    <string name="project_id" translatable="false">m9box-dcc70</string>
 </resources>

@@ -36,6 +36,7 @@ exifinterfaceVersion = "1.4.2"
 ezVcardVersion = "0.12.2"
 fbContribVersion = "7.7.4"
 findsecbugsPluginVersion = "1.14.0"
+firebaseAnalyticsVersion = "24.0.0"
 firebaseMessagingVersion = "25.1.2"
 flexboxVersion = "3.0.0"
 fragmentKtxVersion = "1.9.0"
@@ -138,6 +139,7 @@ ext-tasklist = { module = "io.noties.markwon:ext-tasklist", version.ref = "markw
 ez-vcard = { module = "com.googlecode.ez-vcard:ez-vcard", version.ref = "ezVcardVersion" }
 findsecbugs-plugin = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version.ref = "findsecbugsPluginVersion" }
 fb-contrib = { module = "com.mebigfatguy.fb-contrib:fb-contrib", version.ref = "fbContribVersion" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics", version.ref = "firebaseAnalyticsVersion" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebaseMessagingVersion" }
 flexbox = { module = "com.google.android.flexbox:flexbox", version.ref = "flexboxVersion" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gsonVersion" }
